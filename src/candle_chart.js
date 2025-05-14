@@ -5,7 +5,12 @@ export const Candle_Chart = (props) => {
 
     const {
 		selected_candles,
+        set_is_listing_status,
+        is_listing_status,
+        ticker_symbol
+
 	} = props
+
     const canvas_dates = useRef()
     const canvas_price = useRef()
     const canvas_chart = useRef()
@@ -26,7 +31,7 @@ export const Candle_Chart = (props) => {
     const starting_canvas_width = useRef(0)
     const current_canvas_width = useRef(0)
     const prev_canvas_width = useRef(0)
-    const candle_width = useRef(10)
+    
     const candles = useRef([])
     const prev_shrink_expand = useRef(0)
     const current_shrink_expand = useRef(0)
@@ -40,23 +45,31 @@ export const Candle_Chart = (props) => {
     const unit_amount = useRef(1)
     const static_mid = useRef(0)
     const shrink_expand_height = useRef(0)
-    const candles_loaded = useRef(false)
     const [candle_high, set_candle_high] = useState(0)
     const [candle_close, set_candle_close] = useState(0)
     const [candle_open, set_candle_open] = useState(0)
     const [candle_low, set_candle_low] = useState(0)
     const [candle_color, set_candle_color] = useState('')
+    const pixels_between_candles = useRef(5)
 
-    const hovered_candle_open = useRef(0)
-    const hovered_candle_close = useRef(0)
-    const hovered_candle_low = useRef(0)
-    console.log('rendered')
-    
+    const candle_width = useRef(10)
+    const chart = useRef({
+        current_pixels_between_candles: 5,
+        current_candle_width: 10,
+        current_full_candle_width: 15,
+        x_grid_increaser: 10,
+        x_grid_width: (10 + 5) * 10,
+    })
+
+    const x_grid_size = useRef(15)
+    const x_grid_size_increaser = useRef(10)
+
     // Canvas Re-Size
     useEffect(() => {
         const resizeCanvas = () => {
+
             if (!canvas_chart.current || !canvas_price.current) return;
-            
+                
                 const canvas = canvas_chart.current;
                 const ctx = canvas.getContext('2d');
                 if (!ctx) return;
@@ -76,26 +89,46 @@ export const Candle_Chart = (props) => {
                 current_mid_price.current = 5
                 prev_mid_price.current = 5
                 static_mid.current = 5
+                candles.current = selected_candles
 
+                let candle_loc = selected_candles[0]?.open*(starting_canvas_height.current / 10)
+
+                
+                
+                let res =  selected_candles[0]?.open / 1
+                res = res * current_pixels_per_price_unit.current
+                res = res - starting_canvas_height.current
+        
                 // Starting Height
-                // current_canvas_height.current += 3549.59
-                // prev_canvas_height.current += 3549.59
- 
-                // // Starting Y
-                // let half = 122.6 * 5
-                // current_y_spacing.current = -2970.59 - half
-                // prev_y_spacing.current = -2970.59 - half
+                current_canvas_height.current = candle_loc + (starting_canvas_height.current / 2)
+                prev_canvas_height.current = candle_loc + (starting_canvas_height.current / 2)
+
+                // Starting Y
+                current_y_spacing.current = -candle_loc + (starting_canvas_height.current / 2)
+                prev_y_spacing.current = -candle_loc+ (starting_canvas_height.current / 2)
 
                 // Starting X
-                // current_x_spacing.current = ((candle_width.current+5) * 3950) - (canvas.width/2)
-                // prev_x_spacing.current = ((candle_width.current+5) * 3950) - (canvas.width/2)
-                // current_x_spacing.current = -(canvas.width/2)
-                // prev_x_spacing.current = -(canvas.width/2)
+                current_x_spacing.current = ((candle_width.current+5) * selected_candles.length) - (canvas.width/2)
+                prev_x_spacing.current = ((candle_width.current+5) * selected_candles.length) - (canvas.width/2)
+                current_x_spacing.current = -(canvas.width/2)
+                prev_x_spacing.current = -(canvas.width/2)
 
                 // Starting Mid
-                // current_mid_price.current = ((3549.59+(122.6*5)) / 122.6)
-                // prev_mid_price.current = ((3549.59+(122.6*5)) / 122.6)
-                // static_mid.current =((3549.59+(122.6*5)) / 122.6)
+                current_mid_price.current = selected_candles[0]?.open
+                prev_mid_price.current = selected_candles[0]?.open
+                static_mid.current =selected_candles[0]?.open
+
+                // Candle Width
+                // x_grid_size.current = (candle_width.current + pixels_between_candles.current) * 10
+
+
+
+
+                // Reset 
+                zoom_level.current = 0
+                shrink_expand_height.current = 0
+                price_counter.current = 1
+                unit_amount.current = 1
 
 
                 const canvas_ = canvas_price.current;
@@ -115,7 +148,7 @@ export const Candle_Chart = (props) => {
                 canvas_date.width = canvas_date.offsetWidth;
 
             
-
+        
         };
       
         // Run on mount
@@ -127,7 +160,7 @@ export const Candle_Chart = (props) => {
         return () => {
           window.removeEventListener('resize', resizeCanvas);
         };
-    }, []);
+    }, [selected_candles]);
     const handleMouseDown = () => {
         mousePressedRef.current = true;
         y_coord_on_mouse_click.current = mouseY.current
@@ -167,70 +200,7 @@ export const Candle_Chart = (props) => {
 
       
     };
-    // Transform Candles to Fit Canvas
-    useEffect(()=>{
-        
-        let s = selected_candles.slice(0,1)
-        let new_candles = selected_candles.reverse().map((item)=> ({
-            ...item,
-            date: item.candle_date,
-            high: item.candle_high,
-            open: Math.min(item.candle_open, item.candle_close),
-            close: Math.max(item.candle_open, item.candle_close),
-            low: item.candle_low,
-            prev_high : 0,
-            prev_height : 0,
-            prev_bottom : 0,
-            prev_low : 0,
-            current_high : 0,
-            current_height : 0,
-            current_bottom : 0,
-            current_low : 0,
-            color: item.candle_open > item.candle_close ? '#ef5350' : '#26a69a'
-        }))
-    
-        const canvas = canvas_chart.current
-        let chartHeight = canvas.height;
-        const current_pixels_per_price_unit = chartHeight / 10
-        
-        const toCanvasY = (price) => {
-            let a = price *current_pixels_per_price_unit
-            let price_px =  -(a - chartHeight)
-            return price_px
-        }
-            
-        const toHeight = (close, open) => -(close - open) * current_pixels_per_price_unit;
-    
-        let startX = 0;
-        new_candles = new_candles.map((candle) => {
-            startX += 15;
-            const bottom = toCanvasY(Math.min(candle.open, candle.close));
-            const height = toHeight(Math.max(candle.open, candle.close),Math.min(candle.open, candle.close));
-            const high = toCanvasY(candle.high);
-            const low = toCanvasY(candle.low);
-   
-    
-            return {
-                ...candle,
-                prev_high : high,
-                prev_height : height,
-                prev_bottom : bottom,
-                prev_low : low,
-                current_high : high,
-                current_height : height,
-                current_bottom : bottom,
-                current_low : low,
 
-
-            };
-        });
-        
-        // candles.current = new_candles.slice(426,610)
-        candles.current = new_candles
-        candles_loaded.current = true
-
-
-    }, [selected_candles])
     // Canvas Chart
     useEffect(() => {
         
@@ -283,26 +253,34 @@ export const Candle_Chart = (props) => {
             ctx.stroke();
             ctx.restore()
         };
+        const draw_x_grid = ()=>{
+
+            ctx.save()
+            ctx.beginPath();
+            ctx.strokeStyle = 'gray';
+            ctx.lineWidth = .2;
+            
+            // let full_candle_width = candle_width.current + 5
+            let full_candle_width = chart.current.current_candle_width + 5
+            let starting_x_loc = -(full_candle_width/2)+2.5
+            let ending_x_loc = -(starting_canvas_width.current - current_x_spacing.current)
+
+            for (let y = starting_x_loc; y > ending_x_loc; y -= chart.current.x_grid_width) {
+                const yPos = Math.floor(y);
+                ctx.moveTo(yPos - current_x_spacing.current, 0);
+                ctx.lineTo(yPos - current_x_spacing.current, canvas.height);
+            }
+            
+            ctx.stroke();
+            ctx.restore()
+
+        }
         const drawCandles = () => {
     
             let startingX = 0;
-            let candleWidth = Math.max(1, Math.floor(candle_width.current));
-            let spacing = 5;
-            
-            if(candleWidth === 4){
-                spacing=4
-            }
-            if(candleWidth === 3){
-                spacing=3
-            }
-            if(candleWidth === 2){
-                spacing=2
-            }
-            if(candleWidth === 1){
-                spacing=0
-            }
+            // let candleWidth = Math.max(1, Math.floor(candle_width.current));
+        
 
-            // ctx.fillRect(0, 500, 500, 50);
             candles.current.forEach(item => {
 
                 const x = Math.floor(startingX - current_x_spacing.current);
@@ -310,29 +288,13 @@ export const Candle_Chart = (props) => {
                 const height = Math.floor(item.current_height);
                 ctx.fillStyle = item.color;
              
-                ctx.fillRect(x, y, -candleWidth, height);
-                startingX -= candleWidth + spacing;
+                ctx.fillRect(x, y, -chart.current.current_candle_width, height);
+                startingX -= chart.current.current_candle_width + chart.current.current_pixels_between_candles;
             });
         };
         const drawWicks = () => {
-
-            
-            let startingX = -(candle_width.current / 2);
-            let candleWidth = Math.max(1, Math.floor(candle_width.current));
-            let spacing = 5;
-            if(candleWidth === 4){
-                spacing=4
-            }
-            if(candleWidth === 3){
-                spacing=3
-            }
-            if(candleWidth === 2){
-                spacing=2
-            }
-            if(candleWidth === 1){
-                spacing=0
-            }
-            
+            // let startingX = -(candle_width.current / 2);
+            let startingX = -(chart.current.current_candle_width / 2);
             candles.current.forEach(item => {
                 const x = Math.floor(startingX - current_x_spacing.current);
                 const yHigh = Math.floor(item.current_high - current_y_spacing.current);
@@ -346,7 +308,7 @@ export const Candle_Chart = (props) => {
                 ctx.stroke();
                 ctx.restore();
             
-                startingX -= candleWidth + spacing;
+                startingX -= chart.current.current_candle_width + chart.current.current_pixels_between_candles;
             });
             
         };
@@ -356,7 +318,7 @@ export const Candle_Chart = (props) => {
             const start_pixel = current_canvas_height.current
             const font_size = Math.floor(cp.width / 6);
             const x_position = cp.width / 4;
-    
+      
             ctx_price.font = `${font_size}px Source Sans Pro`;
             ctx_price.fillStyle = 'white';
             
@@ -367,15 +329,68 @@ export const Candle_Chart = (props) => {
                 price += price_counter.current;
             }
         }
+        const draw_Y_mouse = () => {
+            ctx.save()
+            let pixel_of_top_of_canvas = canvas.getBoundingClientRect()['top']
+            let x_mouse_location = mouseY.current
+            let x_mouse_location_adjusted = x_mouse_location - pixel_of_top_of_canvas
+        
+            ctx.beginPath();
+            ctx.lineWidth = 1
+            ctx.strokeStyle = 'gray'
+            ctx.setLineDash([5, 5]); 
+            ctx.moveTo(0,x_mouse_location_adjusted);    
+            ctx.lineTo(canvas.width,x_mouse_location_adjusted);  
+
+            ctx.stroke();
+            ctx.restore();
+        };
+        const draw_Y_price_tag = () =>{
+            
+            let pixel_of_top_of_canvas = canvas.getBoundingClientRect()['top']
+            let x_mouse_location = mouseY.current
+            let x_mouse_location_adjusted = x_mouse_location - pixel_of_top_of_canvas
+            let x = 0
+            let width = canvas.width
+            let height = 25
+            ctx_price.beginPath(); 
+            ctx_price.fillStyle = "#151c20e0";
+        
+            ctx_price.fillRect(x, x_mouse_location_adjusted- (height/2), width, height);
+            ctx_price.stroke();
+            ctx_price.restore();
+        }
+        const plot_y_price_tag = () => {
+            ctx_price.beginPath(); 
+          
+      
+            ctx_price.fillStyle = "#383838";
+
+            let x_loc = Math.abs(mouseY.current-starting_canvas_height.current)
+            let y_loc_price =x_loc/current_pixels_per_price_unit.current
+            let y_spacing_in_price = current_y_spacing.current/current_pixels_per_price_unit.current
+
+            let shrink_expand_in_price = shrink_expand_height.current / current_pixels_per_price_unit.current
+   
+            let price = ((y_loc_price - y_spacing_in_price) - shrink_expand_in_price) * unit_amount.current
+
+    
+            ctx_price.fillStyle = "white";
+            ctx_price.font = '20px Source Sans Pro';
+            ctx_price.fillText(price.toFixed(2), 20 , mouseY.current+5);
+            ctx_price.stroke();
+        }
+        // Date
         const draw_X_mouse = () => {
             ctx.save()
      
             // Find Current x-loc
-            let mouse_x_loc = mouseX.current - canvas.getBoundingClientRect().left
+            let mouse_x_loc = mouseX.current
             let mouse_x_loc_with_x_spacing = -(mouse_x_loc + current_x_spacing.current)
 
             // Track Candle Width
-            let full_candle_width = candle_width.current + 5
+            // let full_candle_width = candle_width.current + 5
+            let full_candle_width = chart.current.current_candle_width + 5
 
             // Track X-Spacing
             let spacing_in_candles = current_x_spacing.current / full_candle_width
@@ -426,54 +441,24 @@ export const Candle_Chart = (props) => {
             ctx.stroke();
             ctx.restore();
         }
-        const draw_Y_mouse = () => {
-            ctx.save()
-            let pixel_of_top_of_canvas = canvas.getBoundingClientRect()['top']
-            let x_mouse_location = mouseY.current
-            let x_mouse_location_adjusted = x_mouse_location - pixel_of_top_of_canvas
-        
-            ctx.beginPath();
-            ctx.lineWidth = 1
-            ctx.strokeStyle = 'gray'
-            ctx.setLineDash([5, 5]); 
-            ctx.moveTo(0,x_mouse_location_adjusted);    
-            ctx.lineTo(canvas.width,x_mouse_location_adjusted);  
-
-            ctx.stroke();
-            ctx.restore();
-        };
-        const draw_Y_price_tag = () =>{
-            
-            let pixel_of_top_of_canvas = canvas.getBoundingClientRect()['top']
-            let x_mouse_location = mouseY.current
-            let x_mouse_location_adjusted = x_mouse_location - pixel_of_top_of_canvas
-            let x = 0
-            let width = canvas.width
-            let height = 25
-            ctx_price.beginPath(); 
-            ctx_price.fillStyle = "teal";
-            ctx_price.fillRect(x, x_mouse_location_adjusted- (height/2), width, height);
-            ctx_price.stroke();
-            ctx_price.restore();
-        }
         const draw_X_date_tag = () => {
             ctx_date.save()
-            ctx_date.clearRect(0, 0, canvas_date.width, canvas_date.height);
+            
 
             // Find Current x-loc
-            let mouse_x_loc = mouseX.current - canvas.getBoundingClientRect().left
+            let mouse_x_loc = mouseX.current
             let mouse_x_loc_with_x_spacing = -(mouse_x_loc + current_x_spacing.current)
 
             // Track Candle Width
-            let full_candle_width = candle_width.current + 5
+            // let full_candle_width = candle_width.current + 5
+            let full_candle_width = chart.current.current_candle_width + 5
 
             // Track X-Spacing
             let spacing_in_candles = current_x_spacing.current / full_candle_width
 
             // Track Index
             let index = Math.floor(mouse_x_loc_with_x_spacing/full_candle_width)
-            
-            console.log(index)
+   
            
             mouse_x_loc = (mouse_x_loc - current_x_spacing.current);
             mouse_x_loc = mouse_x_loc - (candle_width.current / 2);
@@ -487,11 +472,12 @@ export const Candle_Chart = (props) => {
             let y_rect = 0;
             let width_rect = 150;
             let height_rect = 40;
-            console.log(index)
+       
             if(index>=0){
                 ctx_date.beginPath();
-                ctx_date.fillStyle = "teal";
-                ctx_date.fillRect( (-pixelStart - current_x_spacing.current)-80, y_rect, width_rect, height_rect);
+                // ctx_date.fillStyle = "teal";
+                ctx_date.fillStyle = "rgb(74, 13, 13)";
+                ctx_date.fillRect( (-pixelStart - current_x_spacing.current)-80, y_rect, width_rect, canvas_date.height);
                 ctx_date.stroke();
                 ctx_date.restore()
             }
@@ -499,23 +485,14 @@ export const Candle_Chart = (props) => {
             
         }
         const draw_date_text = () => {
-
-            // let mouse_x_loc = (mouseX.current - canvas.getBoundingClientRect().left)
-            // mouse_x_loc = (mouse_x_loc - current_x_spacing.current) 
-            // mouse_x_loc = mouse_x_loc - (candle_width.current / 2)
-            // let full_candle_width = candle_width.current + 5
-            // let hovered_candled_index = ((mouse_x_loc / full_candle_width) + 1).toFixed(0)
-            
-            // let pixelStart = (hovered_candled_index * full_candle_width) + (candle_width.current / 2)
-            // var text = candles.current[hovered_candled_index]?.date;
-        
-           
-            // Find Current x-loc
-            let mouse_x_loc = mouseX.current - canvas.getBoundingClientRect().left
+     
+            let mouse_x_loc = mouseX.current 
             let mouse_x_loc_with_x_spacing = -(mouse_x_loc + current_x_spacing.current)
 
+
             // Track Candle Width
-            let full_candle_width = candle_width.current + 5
+            // let full_candle_width = candle_width.current + 5
+            let full_candle_width = chart.current.current_candle_width + 5
 
             // Track X-Spacing
             let spacing_in_candles = current_x_spacing.current / full_candle_width
@@ -533,9 +510,9 @@ export const Candle_Chart = (props) => {
             const formattedDate = date.toLocaleDateString('en-GB', options);
             const shortYear = `'${date.getFullYear().toString().slice(-2)}`;
             const finalFormat = `${formattedDate} ${shortYear}`;
-            console.log(finalFormat)
+            
 
-            let y_text = 25
+            let y_text = 30
             if(index>=0){
             ctx_date.beginPath(); 
             ctx_date.font = '16px Arial'
@@ -543,27 +520,27 @@ export const Candle_Chart = (props) => {
             ctx_date.fillText(finalFormat, (-pixelStart - current_x_spacing.current)-60, y_text);
             ctx_date.stroke();
             }
+        
         }
-        const plot_y_price_tag = () => {
-            ctx_price.beginPath(); 
-          
-      
-            ctx_price.fillStyle = "#383838";
+        const draw_x_grid_date = () => {
 
-            let x_loc = Math.abs(mouseY.current-starting_canvas_height.current)
-            let y_loc_price =x_loc/current_pixels_per_price_unit.current
-            let y_spacing_in_price = current_y_spacing.current/current_pixels_per_price_unit.current
+            let startingX = -(chart.current.current_candle_width / 2);
+            
+            candles.current.forEach(item => {
+                const x = Math.floor(startingX - current_x_spacing.current);
+                ctx.save()
+                ctx.beginPath(); 
+                ctx_date.fillText('5/13/25', x-25, 30);
+                ctx.stroke();
+                ctx.restore();
+            
+                startingX -= chart.current.x_grid_width;
+            });
 
-            let shrink_expand_in_price = shrink_expand_height.current / current_pixels_per_price_unit.current
-   
-            let price = ((y_loc_price - y_spacing_in_price) - shrink_expand_in_price) * unit_amount.current
-
-    
-            ctx_price.fillStyle = "white";
-            ctx_price.font = '20px Source Sans Pro';
-            ctx_price.fillText(price.toFixed(2), 20 , mouseY.current+5);
-            ctx_price.stroke();
+  
         }
+
+
 
         // Mouse Events
         const handleMouseMove = (e) => {
@@ -611,6 +588,7 @@ export const Candle_Chart = (props) => {
             draw(); 
         };
         const mouseWheel = (e) => {
+     
             const zoomOut = () => {
 
                 shrink_expand_height.current += current_mid_price.current
@@ -619,6 +597,7 @@ export const Candle_Chart = (props) => {
                 const added_height = current_mid_price.current * -1;
                 current_canvas_height.current += added_height;
                 prev_canvas_height.current = current_canvas_height.current;
+         
                 const zoomLevels = [
                     { threshold: 80, unit_size_increase: 5 , unit_amount: 5},
                     { threshold: 200, unit_size_increase: 2 , unit_amount: 10},
@@ -693,6 +672,7 @@ export const Candle_Chart = (props) => {
                 const added_height = current_mid_price.current * -1;
                 current_canvas_height.current -= added_height;
                 prev_canvas_height.current = current_canvas_height.current;
+              
                 const zoomLevels = [
                     { threshold: 80, multiplier: 5 , pixel_size_reducer: 1},
                     { threshold: 200, multiplier: 2 , pixel_size_reducer: 5},
@@ -760,7 +740,6 @@ export const Candle_Chart = (props) => {
                 animationFrameId = requestAnimationFrame(draw);
             }
         };
-
         const draw = () => {
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -776,39 +755,116 @@ export const Candle_Chart = (props) => {
             // ctx.stroke();
 
             drawGrid();
+            draw_x_grid()
+            
             drawCandles();
             drawWicks();
             drawPrices();
             draw_Y_mouse()
             draw_Y_price_tag()
             draw_X_mouse()
+
+            plot_y_price_tag()
+            
+            ctx_date.clearRect(0, 0, canvas_date.width, canvas_date.height);
+            
+            draw_x_grid_date();
             draw_X_date_tag()
             draw_date_text()
-            plot_y_price_tag()
             
             animationFrameId = null;
 
         };
-        const zoom = (event) => {
+        const candle_width_zoom = (event) => {
+  
             const zoomIn = () => {      
-                candle_width.current = candle_width.current  + 1     
+                
+                console.log('=================')
+                
+                console.log('candle_width',chart.current.current_candle_width)
+                console.log('space between:',chart.current.current_pixels_between_candles)
+          
+        
+                // Increase Grid Width
+                chart.current.x_grid_width += chart.current.x_grid_increaser
+                // Increase Space Between Candles
+                if(chart.current.current_pixels_between_candles < 5){
+                    pixels_between_candles.current +=1
+                    chart.current.current_pixels_between_candles +=1
+                }
+                // Increase Candle Width
+                if(chart.current.current_pixels_between_candles >= 5){
+                   chart.current.current_candle_width += 1
+                   chart.current.current_full_candle_width = chart.current.current_candle_width + chart.current.current_pixels_between_candles
+                }
+                // Add More Grids
+                const zoomLevels = [
+                    { threshold: 5, increaser: 20},
+                    { threshold: 10, increaser: 10},
+                    { threshold: 25, increaser: 5},
+                    { threshold: 35, increaser: 3},
+                    { threshold: 100, increaser: 1},
+                ];            
+                for(const level of zoomLevels){
+                    if(level.threshold === chart.current.current_full_candle_width){
+                        chart.current.x_grid_increaser = level.increaser
+                        chart.current.x_grid_width = chart.current.current_full_candle_width * level.increaser
+                        
+                    }
+                }
+              
             }
             const zoomOut = () => {
-                if(candle_width.current > 0){
-                    candle_width.current = candle_width.current  -1
+                console.log('=================')
+                
+                console.log('candle_width',chart.current.current_candle_width)
+                console.log('space between:',chart.current.current_pixels_between_candles)
+                
+                // Decrease Grid Width
+                chart.current.x_grid_width -= chart.current.x_grid_increaser
+                // Decrease Space Between Pixels
+                if(chart.current.current_candle_width===0){
+                    if(chart.current.current_pixels_between_candles>1){
+                        pixels_between_candles.current -=1
+                        chart.current.current_pixels_between_candles -=1
+                    }         
+                }
+                // Decrease Candle Width
+                if(chart.current.current_candle_width > 0){
+                    chart.current.current_candle_width -= 1
+                    chart.current.current_full_candle_width = chart.current.current_candle_width + chart.current.current_pixels_between_candles
                 } 
+
+                // Reduce Grids
+                const zoomLevels = [
+                    { threshold: 5, increaser: 40},
+                    { threshold: 10, increaser: 20},
+                    { threshold: 25, increaser: 10},
+                    { threshold: 35, increaser: 5},
+                    { threshold: 100, increaser: 3},
+                ];            
+                for(const level of zoomLevels){
+                    if(level.threshold === chart.current.current_full_candle_width){
+                        chart.current.x_grid_increaser = level.increaser
+                        chart.current.x_grid_width = chart.current.current_full_candle_width * level.increaser
+                        
+                    }
+                }
+                
             }
+
             event.deltaY < 0 && zoomIn()
             event.deltaY > 0 && zoomOut()
             animationFrameId = null;
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             animationFrameId = requestAnimationFrame(draw); 
         }
+
         canvas.addEventListener('mousemove', handleMouseMove);
         canvas.addEventListener('mouseup', handleMouseUpPrices);
         canvas.addEventListener('mousedown', handleMouseDownPrices);
         canvas.addEventListener('resize', handleResize);
-        canvas.addEventListener('wheel', zoom)
+        canvas.addEventListener('wheel', candle_width_zoom)
 
         cp.addEventListener('mouseup', handleMouseUpPrices);
         cp.addEventListener('mousedown', handleMouseDownPrices);
@@ -818,22 +874,22 @@ export const Candle_Chart = (props) => {
         draw();
         
         return () => {
-          cancelAnimationFrame(animationFrameId);canvas.addEventListener('wheel', handleWheel);
-          canvas.addEventListener('wheel', handleWheel);
-          canvas.removeEventListener('mousemove', handleMouseMove);
-          canvas.removeEventListener('mouseup', handleMouseUp);
-          canvas.removeEventListener('mousedown', handleMouseDown);
-          canvas.removeEventListener('resize', handleResize);
+            cancelAnimationFrame(animationFrameId);canvas.removeEventListener('wheel', handleWheel);
+            canvas.removeEventListener('wheel', handleWheel);
+            canvas.removeEventListener('mousemove', handleMouseMove);
+            canvas.removeEventListener('mouseup', handleMouseUp);
+            canvas.removeEventListener('mousedown', handleMouseDown);
+            canvas.removeEventListener('resize', handleResize);
+            canvas.removeEventListener('wheel', candle_width_zoom)
 
-          cp.addEventListener('mouseup', handleMouseUpPrices);
-          cp.addEventListener('mousedown', handleMouseDownPrices);
-          cp.addEventListener('resize', handleResize_price);
-  
+            cp.removeEventListener('mouseup', handleMouseUpPrices);
+            cp.removeEventListener('mousedown', handleMouseDownPrices);
+            cp.removeEventListener('resize', handleResize_price);
+            cp.removeEventListener('wheel', mouseWheel)
+    
         };
-    }, [candles_loaded.current]);
-    useEffect(()=>{
+    }, [selected_candles]);
 
-    },[candles.current])
     
     return(
         <div className='candle_chart_container'>
@@ -843,8 +899,10 @@ export const Candle_Chart = (props) => {
 
                     <div className='header-bar'>
     
-                        <div className='header_slot'>
-                                {'AAPL'}
+                        <div className='header_slot' onClick={()=>{
+                            set_is_listing_status(!is_listing_status)
+                        }}>
+                                {ticker_symbol}
                             </div>
                             <div className='header_slot'>
                                 <div className='header_one'>H</div>
