@@ -22,6 +22,7 @@ const App = () => {
     price_height: 0,
     date_height: 0
   })
+  const [selected_abcd, set_selected_abcd] = useState()
 
 
   const get_listed_tickers = async (searched_ticker, selected_type) => {
@@ -167,6 +168,23 @@ const App = () => {
     get_abcd_of_selected_symbol('A')
   
   }, [])  
+
+  useEffect(()=>{
+    // if(selected_abcd){
+    //   console.log('======================')
+    //   console.log(selected_abcd)
+    //   console.log('A:',selected_abcd['pattern_A_pivot_date'], selected_abcd['pivot_A_price'])
+    //   console.log('B:',selected_abcd['pattern_B_pivot_date'], selected_abcd['pivot_B_price'])
+    //   console.log('C:',selected_abcd['pattern_C_pivot_date'], selected_abcd['pivot_C_price'])
+    //   console.log('D:',selected_abcd['pattern_d_created_date'], selected_abcd['pivot_D_price'])
+    //   console.log('Enter:',selected_abcd['trade_entered_date'], selected_abcd['trade_entered_price'])
+    //   console.log('Exit:',selected_abcd['trade_exited_date'], selected_abcd['trade_exited_price'])
+    // }
+    
+
+    
+  },[selected_abcd])
+  
   return (
 
       <div className='App' >
@@ -259,6 +277,7 @@ const App = () => {
             is_listing_status={is_listing_status}
             ticker_symbol={ticker_symbol}
             set_canvas_dimensions={set_canvas_dimensions}
+            selected_abcd={selected_abcd}
             
             />
           </div>
@@ -292,7 +311,7 @@ const App = () => {
             <div className='abcd_rows_container'>
               {current_abcds.map(abcd=>{
             
-            return(<div className='abcd_row' onClick={()=>{}}>
+            return(<div className={abcd === selected_abcd ? 'abcd_row_selected' : 'abcd_row'}onClick={()=>{set_selected_abcd(abcd)}}>
               
       
               <div className={abcd.trade_result === 'Win' ? 'abcd_column1_positive' : 'abcd_column1_negative'}>{abcd.trade_result}</div>

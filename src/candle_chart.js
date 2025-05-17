@@ -8,7 +8,8 @@ export const Candle_Chart = (props) => {
         set_is_listing_status,
         is_listing_status,
         ticker_symbol,
-        set_canvas_dimensions
+        set_canvas_dimensions,
+        selected_abcd
 
 	} = props
 
@@ -65,6 +66,17 @@ export const Candle_Chart = (props) => {
         starting_price_unit_pixel_size: 0,
         current_price_unit_pixel_size: 0,
         grid_size_count: 0
+    })
+
+    let [abcd, set_abcd] = useState({
+        a: 0,
+        b: 0,
+        c: 0,
+        d: 0,
+        a_price: 0,
+        b_price: 0,
+        c_price: 0,
+        d_price: 0,
     })
 
     const x_grid_size = useRef(15)
@@ -164,7 +176,6 @@ export const Candle_Chart = (props) => {
                 canvas_date.height = canvas_date.offsetHeight;
                 canvas_date.width = canvas_date.offsetWidth;
 
-  
 
                 set_canvas_dimensions((prev)=> ({
                     ...prev,
@@ -308,16 +319,23 @@ export const Candle_Chart = (props) => {
             // let candleWidth = Math.max(1, Math.floor(candle_width.current));
         
 
-            candles.current.forEach(item => {
-
+          candles.current.forEach(item => {
                 const x = Math.floor(startingX - current_x_spacing.current);
                 const y = Math.floor(item.current_bottom - current_y_spacing.current);
+                const width = -chart.current.current_candle_width; // assuming this is negative for direction
                 const height = Math.floor(item.current_height);
-                ctx.fillStyle = item.color;
-             
-                ctx.fillRect(x, y, -chart.current.current_candle_width, height);
+
+                // Fill with black
+                ctx.fillStyle = "black";
+                ctx.fillRect(x, y, width, height);
+
+                // Outline with item color
+                ctx.strokeStyle = item.color;
+                ctx.lineWidth = 1; // Adjust thickness if needed
+                ctx.strokeRect(x, y, width, height);
+
                 startingX -= chart.current.current_candle_width + chart.current.current_pixels_between_candles;
-            });
+});
         };
         const drawWicks = () => {
             // let startingX = -(candle_width.current / 2);
@@ -595,7 +613,6 @@ export const Candle_Chart = (props) => {
             mouseX.current = e.clientX - canvas.getBoundingClientRect().left;
             mouseY.current = e.clientY - canvas.getBoundingClientRect().top;
             
-            // console.log(mouseX.current, mouseY.current)
             if(mousePressedRef.current){   
               
                 // x
@@ -788,12 +805,7 @@ export const Candle_Chart = (props) => {
             if (!animationFrameId) {
                 animationFrameId = requestAnimationFrame(draw);
             }
-            // console.log('==================')
-            // console.log('starting_price_unit_pixel_size:',chart.current.starting_price_unit_pixel_size)
-            // console.log('current_price_unit_pixel_size:',chart.current.current_price_unit_pixel_size)
-            // console.log('threshold:',expand_threshold)
-            // console.log('unit amount:', unit_amount.current)
-            // console.log('---:',chart.current.current_price_unit_pixel_size,threshold)
+   
         };
         const candle_width_zoom = (event) => {
             
@@ -834,9 +846,12 @@ export const Candle_Chart = (props) => {
                 chart.current.x_grid_width -= chart.current.x_grid_increaser
                 // Decrease Space Between Pixels
                 if(chart.current.current_candle_width===0){
-                    if(chart.current.current_pixels_between_candles>1){
+                    if(chart.current.current_full_candle_width>1){
+                        console.log(chart.current.current_full_candle_width)
                         pixels_between_candles.current -=1
                         chart.current.current_pixels_between_candles -=1
+                        chart.current.current_full_candle_width = chart.current.current_candle_width + chart.current.current_pixels_between_candles
+                        
                     }         
                 }
                 // Decrease Candle Width
@@ -876,15 +891,198 @@ export const Candle_Chart = (props) => {
 
             ctx_price.clearRect(0, 0, cp.width, cp.height);
             
+
             // ctx.beginPath();
             // ctx.strokeStyle = 'yellow';
             // ctx.lineWidth = 1;
             // ctx.moveTo(0, starting_canvas_height.current/2);
             // ctx.lineTo(canvas.width, starting_canvas_height.current/2);
             // ctx.stroke();
+            
+            
+            const  draw_start_AB = () => {
+                
+                ctx.save()
+                // --- A Coordinates ---
+                let a_y_loc = (abcd.a_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                a_y_loc = -(a_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let a_x_loc = -chart.current.current_full_candle_width * abcd.a;
+                a_x_loc -= current_x_spacing.current;
+                a_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- B Coordinates ---
+                let b_y_loc = (abcd.b_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                b_y_loc = -(b_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let b_x_loc = -chart.current.current_full_candle_width * abcd.b;
+                b_x_loc -= current_x_spacing.current;
+                b_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- C Coordinates ---
+                let c_y_loc = (abcd.c_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                c_y_loc = -(c_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let c_x_loc = -chart.current.current_full_candle_width * abcd.c;
+                c_x_loc -= current_x_spacing.current;
+                c_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- D Coordinates ---
+                let d_y_loc = (abcd.d_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                d_y_loc = -(d_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let d_x_loc = -chart.current.current_full_candle_width * abcd.d;
+                d_x_loc -= current_x_spacing.current;
+                d_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- Draw Lines ---
+                ctx.beginPath();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 7;
+
+                // AB
+                ctx.moveTo(a_x_loc, a_y_loc);
+                ctx.lineTo(b_x_loc, b_y_loc);
+                // BC
+                ctx.lineTo(c_x_loc, c_y_loc); 
+                // CD
+                ctx.lineTo(d_x_loc, d_y_loc); 
+
+                ctx.closePath(); // Closes the path back to point A
+                // ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'; // white with transparency
+                // ctx.fill();
+
+                // --- Optional stroke on top ---
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+
+                ctx.stroke();
+                ctx.restore()
+
+            }
+
+            const  draw_retracement = () => {
+                
+                ctx.save()
+                // --- A Coordinates ---
+                let a_y_loc = (abcd.a_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                a_y_loc = -(a_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let a_x_loc = -chart.current.current_full_candle_width * abcd.a;
+                a_x_loc -= current_x_spacing.current;
+                a_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- B Coordinates ---
+                let b_y_loc = (abcd.b_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                b_y_loc = -(b_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let b_x_loc = -chart.current.current_full_candle_width * abcd.b;
+                b_x_loc -= current_x_spacing.current;
+                b_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- C Coordinates ---
+                let c_y_loc = (abcd.c_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                c_y_loc = -(c_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let c_x_loc = -chart.current.current_full_candle_width * abcd.c;
+                c_x_loc -= current_x_spacing.current;
+                c_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- D Coordinates ---
+                let d_y_loc = (abcd.d_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                d_y_loc = -(d_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let d_x_loc = -chart.current.current_full_candle_width * abcd.d;
+                d_x_loc -= current_x_spacing.current;
+                d_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- Draw Lines ---
+                ctx.beginPath();
+                ctx.strokeStyle = 'yellow';
+                ctx.lineWidth = 3
+                ctx.setLineDash([5, 5]); 
+
+                // AB
+                ctx.moveTo(a_x_loc, a_y_loc);
+                ctx.lineTo(c_x_loc, c_y_loc);
+
+                ctx.moveTo(b_x_loc, b_y_loc);
+                ctx.lineTo(d_x_loc, d_y_loc);
+                // // BC
+                ctx.closePath(); // Closes the path back to point A
+                // ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'; // white with transparency
+                // ctx.fill();
+
+                // --- Optional stroke on top ---
+                ctx.strokeStyle = 'white';
+                // ctx.lineWidth = 7;
+
+                ctx.stroke();
+                ctx.restore()
+
+            }
+
+            const  draw_retracement_days = () => {
+                
+                ctx.save()
+                // --- A Coordinates ---
+                let a_y_loc = (abcd.a_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                a_y_loc = -(a_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let a_x_loc = -chart.current.current_full_candle_width * abcd.a;
+                a_x_loc -= current_x_spacing.current;
+                a_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- B Coordinates ---
+                let b_y_loc = (abcd.b_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                b_y_loc = -(b_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let b_x_loc = -chart.current.current_full_candle_width * abcd.c;
+                b_x_loc -= current_x_spacing.current;
+                b_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- C Coordinates ---
+                let c_y_loc = (abcd.c_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                c_y_loc = -(c_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let c_x_loc = -chart.current.current_full_candle_width * abcd.b;
+                c_x_loc -= current_x_spacing.current;
+                c_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- D Coordinates ---
+                let d_y_loc = (abcd.d_price / unit_amount.current) * current_pixels_per_price_unit.current;
+                d_y_loc = -(d_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+
+                let d_x_loc = -chart.current.current_full_candle_width * abcd.d;
+                d_x_loc -= current_x_spacing.current;
+                d_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- Draw Lines ---
+                ctx.beginPath();
+                ctx.strokeStyle = 'blue';
+                ctx.lineWidth = 3
+                ctx.setLineDash([5, 5]); 
+
+                // AB
+                ctx.moveTo(a_x_loc, a_y_loc);
+                ctx.lineTo(c_x_loc, a_y_loc);
+                ctx.lineTo(c_x_loc, c_y_loc);
+
+                ctx.moveTo(b_x_loc, b_y_loc);
+                ctx.lineTo(b_x_loc, d_y_loc);
+                ctx.lineTo(d_x_loc, d_y_loc);
+
+                ctx.stroke();
+                ctx.restore()
+
+            }
+
+
+   
+
 
             drawGrid();
-            draw_x_grid()
+            // draw_x_grid()
             
             drawCandles();
             drawWicks();
@@ -897,9 +1095,15 @@ export const Candle_Chart = (props) => {
             
             ctx_date.clearRect(0, 0, canvas_date.width, canvas_date.height);
             
-            draw_x_grid_date();
-            draw_X_date_tag()
-            draw_date_text()
+            // draw_x_grid_date();
+            // draw_X_date_tag()
+            // draw_date_text()
+
+            draw_start_AB()
+      
+            draw_retracement()
+            // draw_retracement_days()
+    
             
             animationFrameId = null;
 
@@ -934,8 +1138,58 @@ export const Candle_Chart = (props) => {
             cp.removeEventListener('wheel', candle_height_zoom)
     
         };
-    }, [selected_candles]);
+    }, [selected_candles, abcd]);
 
+    useEffect(()=>{
+        
+    
+        if(selected_abcd){
+
+            
+            // console.log(selected_abcd)
+            // console.log('======================')
+            // console.log(selected_abcd)
+            // console.log('A:',selected_abcd['pattern_A_pivot_date'], selected_abcd['pivot_A_price'])
+            // console.log('B:',selected_abcd['pattern_B_pivot_date'], selected_abcd['pivot_B_price'])
+            // console.log('C:',selected_abcd['pattern_C_pivot_date'], selected_abcd['pivot_C_price'])
+            // console.log('D:',selected_abcd['pattern_d_created_date'], selected_abcd['pivot_D_price'])
+            // console.log('Enter:',selected_abcd['trade_entered_date'], selected_abcd['trade_entered_price'])
+            // console.log('Exit:',selected_abcd['trade_exited_date'], selected_abcd['trade_exited_price'])
+
+            const get_index = (candle_date) => {
+                const index = selected_candles.findIndex(obj => {
+                    const date = new Date(obj.date);
+                    const formatted = date.toISOString().split("T")[0]; // "YYYY-MM-DD"
+                    return formatted === candle_date;
+                });
+                return index
+            }
+            
+            set_abcd(prev=> ({
+                ...prev,
+                a: get_index(selected_abcd['pattern_A_pivot_date']),
+                b: get_index(selected_abcd['pattern_B_pivot_date']),
+                c: get_index(selected_abcd['pattern_C_pivot_date']),
+                d: get_index(selected_abcd['trade_entered_date']),
+
+                a_price: parseFloat(selected_abcd['pivot_A_price']),
+                b_price:  parseFloat(selected_abcd['pivot_B_price']),
+                c_price:  parseFloat(selected_abcd['pivot_C_price']),
+                d_price: parseFloat(selected_abcd['trade_entered_price']),
+            }))
+            // abcd.a = get_index(selected_abcd['pattern_A_pivot_date'])
+            // abcd.b = get_index(selected_abcd['pattern_B_pivot_date'])
+            // abcd.c = get_index(selected_abcd['pattern_C_pivot_date'])
+            // abcd.d = get_index(selected_abcd['trade_entered_date'])
+
+            // abcd.a_price = parseFloat(selected_abcd['pivot_A_price'])
+            // abcd.b_price = parseFloat(selected_abcd['pivot_B_price'])
+            // abcd.c_price = parseFloat(selected_abcd['pivot_C_price'])
+            // abcd.d_price = parseFloat(selected_abcd['trade_entered_price'])
+
+
+        }
+    },[selected_abcd])
     
     return(
         <div className='candle_chart_container'>
