@@ -7,7 +7,8 @@ export const Candle_Chart = (props) => {
 		selected_candles,
         set_is_listing_status,
         is_listing_status,
-        ticker_symbol
+        ticker_symbol,
+        set_canvas_dimensions
 
 	} = props
 
@@ -54,11 +55,16 @@ export const Candle_Chart = (props) => {
 
     const candle_width = useRef(10)
     const chart = useRef({
-        current_pixels_between_candles: 5,
+        current_pixels_between_candles: 5, 
         current_candle_width: 10,
         current_full_candle_width: 15,
         x_grid_increaser: 10,
         x_grid_width: (10 + 5) * 10,
+
+        y_grid_height: 0,
+        starting_price_unit_pixel_size: 0,
+        current_price_unit_pixel_size: 0,
+        grid_size_count: 0
     })
 
     const x_grid_size = useRef(15)
@@ -77,13 +83,24 @@ export const Candle_Chart = (props) => {
                 canvas.style.height = '100%';
                 canvas.height = canvas.offsetHeight;
                 canvas.width = canvas.offsetWidth;
-                canvas_height.current = canvas.height;
-                starting_canvas_height.current = canvas.height
-                current_canvas_height.current = canvas.height
-                prev_canvas_height.current = canvas.height
+                
+                // Canvas Chart Height
+                canvas_height.current = canvas.height 
+                starting_canvas_height.current = canvas.height 
+                current_canvas_height.current = canvas.height 
+                prev_canvas_height.current =canvas.height 
+                
+
+                // Canvas Chart Width
                 starting_canvas_width.current = canvas.width
                 current_canvas_width.current = canvas.width
                 prev_canvas_width.current = canvas.width
+
+                // Price Unit Height
+                chart.current.starting_price_unit_pixel_size = current_canvas_height.current / 10
+                chart.current.current_price_unit_pixel_size = current_canvas_height.current / 10
+
+
                 prev_pixels_per_price_unit.current = current_canvas_height.current / 10
                 current_pixels_per_price_unit.current = current_canvas_height.current / 10
                 current_mid_price.current = 5
@@ -121,7 +138,7 @@ export const Candle_Chart = (props) => {
                 // Candle Width
                 // x_grid_size.current = (candle_width.current + pixels_between_candles.current) * 10
 
-
+     
 
 
                 // Reset 
@@ -147,7 +164,16 @@ export const Candle_Chart = (props) => {
                 canvas_date.height = canvas_date.offsetHeight;
                 canvas_date.width = canvas_date.offsetWidth;
 
-            
+  
+
+                set_canvas_dimensions((prev)=> ({
+                    ...prev,
+                    chart_height: canvas.height,
+                    price_height: canvas_.height,
+                    date_height: canvas_date.height
+
+                }))
+
         
         };
       
@@ -161,6 +187,7 @@ export const Candle_Chart = (props) => {
           window.removeEventListener('resize', resizeCanvas);
         };
     }, [selected_candles]);
+    
     const handleMouseDown = () => {
         mousePressedRef.current = true;
         y_coord_on_mouse_click.current = mouseY.current
@@ -320,7 +347,7 @@ export const Candle_Chart = (props) => {
             const x_position = cp.width / 4;
       
             ctx_price.font = `${font_size}px Source Sans Pro`;
-            ctx_price.fillStyle = 'white';
+            ctx_price.fillStyle = 'gray';
             
             
             let price = 0
@@ -329,58 +356,21 @@ export const Candle_Chart = (props) => {
                 price += price_counter.current;
             }
         }
+
+        // Mouse Pointer
         const draw_Y_mouse = () => {
             ctx.save()
-            let pixel_of_top_of_canvas = canvas.getBoundingClientRect()['top']
             let x_mouse_location = mouseY.current
-            let x_mouse_location_adjusted = x_mouse_location - pixel_of_top_of_canvas
-        
             ctx.beginPath();
             ctx.lineWidth = 1
             ctx.strokeStyle = 'gray'
             ctx.setLineDash([5, 5]); 
-            ctx.moveTo(0,x_mouse_location_adjusted);    
-            ctx.lineTo(canvas.width,x_mouse_location_adjusted);  
+            ctx.moveTo(0,x_mouse_location);    
+            ctx.lineTo(canvas.width,x_mouse_location);  
 
             ctx.stroke();
             ctx.restore();
         };
-        const draw_Y_price_tag = () =>{
-            
-            let pixel_of_top_of_canvas = canvas.getBoundingClientRect()['top']
-            let x_mouse_location = mouseY.current
-            let x_mouse_location_adjusted = x_mouse_location - pixel_of_top_of_canvas
-            let x = 0
-            let width = canvas.width
-            let height = 25
-            ctx_price.beginPath(); 
-            ctx_price.fillStyle = "#151c20e0";
-        
-            ctx_price.fillRect(x, x_mouse_location_adjusted- (height/2), width, height);
-            ctx_price.stroke();
-            ctx_price.restore();
-        }
-        const plot_y_price_tag = () => {
-            ctx_price.beginPath(); 
-          
-      
-            ctx_price.fillStyle = "#383838";
-
-            let x_loc = Math.abs(mouseY.current-starting_canvas_height.current)
-            let y_loc_price =x_loc/current_pixels_per_price_unit.current
-            let y_spacing_in_price = current_y_spacing.current/current_pixels_per_price_unit.current
-
-            let shrink_expand_in_price = shrink_expand_height.current / current_pixels_per_price_unit.current
-   
-            let price = ((y_loc_price - y_spacing_in_price) - shrink_expand_in_price) * unit_amount.current
-
-    
-            ctx_price.fillStyle = "white";
-            ctx_price.font = '20px Source Sans Pro';
-            ctx_price.fillText(price.toFixed(2), 20 , mouseY.current+5);
-            ctx_price.stroke();
-        }
-        // Date
         const draw_X_mouse = () => {
             ctx.save()
      
@@ -441,6 +431,47 @@ export const Candle_Chart = (props) => {
             ctx.stroke();
             ctx.restore();
         }
+
+        // Mouse Price Tag
+        const draw_Y_price_tag = () =>{
+            
+
+            let x_mouse_location = mouseY.current
+            // let x_mouse_location_adjusted = x_mouse_location - pixel_of_top_of_canvas
+            let x = 0
+            let width = canvas.width
+            let height = 25
+            ctx_price.beginPath(); 
+            ctx_price.fillStyle = "#151c20e0";
+            ctx_price.fillStyle ="#151c20e0";
+        
+            ctx_price.fillRect(x, x_mouse_location- (height/2), width, height);
+            ctx_price.stroke();
+            ctx_price.restore();
+        }
+        const plot_y_price_tag = () => {
+            ctx_price.beginPath(); 
+          
+      
+            ctx_price.fillStyle = "#383838";
+            ctx_price.fillStyle = "rgb(74, 13, 13)";
+
+            let x_loc = Math.abs(mouseY.current-starting_canvas_height.current)
+            let y_loc_price =x_loc/current_pixels_per_price_unit.current
+            let y_spacing_in_price = current_y_spacing.current/current_pixels_per_price_unit.current
+
+            let shrink_expand_in_price = shrink_expand_height.current / current_pixels_per_price_unit.current
+   
+            let price = ((y_loc_price - y_spacing_in_price) - shrink_expand_in_price) * unit_amount.current
+
+    
+            ctx_price.fillStyle = "gray";
+            ctx_price.font = '20px Source Sans Pro';
+            ctx_price.fillText(price.toFixed(2), 20 , mouseY.current+5);
+            ctx_price.stroke();
+        }
+        // Date
+        
         const draw_X_date_tag = () => {
             ctx_date.save()
             
@@ -476,7 +507,7 @@ export const Candle_Chart = (props) => {
             if(index>=0){
                 ctx_date.beginPath();
                 // ctx_date.fillStyle = "teal";
-                ctx_date.fillStyle = "rgb(74, 13, 13)";
+                ctx_date.fillStyle = "#151c20e0";
                 ctx_date.fillRect( (-pixelStart - current_x_spacing.current)-80, y_rect, width_rect, canvas_date.height);
                 ctx_date.stroke();
                 ctx_date.restore()
@@ -510,44 +541,61 @@ export const Candle_Chart = (props) => {
             const formattedDate = date.toLocaleDateString('en-GB', options);
             const shortYear = `'${date.getFullYear().toString().slice(-2)}`;
             const finalFormat = `${formattedDate} ${shortYear}`;
+
+            const metrics = ctx_date.measureText(finalFormat);
+            const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
             
 
             let y_text = 30
             if(index>=0){
             ctx_date.beginPath(); 
             ctx_date.font = '16px Arial'
-            ctx_date.fillStyle = "white";
-            ctx_date.fillText(finalFormat, (-pixelStart - current_x_spacing.current)-60, y_text);
+            ctx_date.fillStyle = "gray";
+            ctx_date.fillText(finalFormat, (-pixelStart - current_x_spacing.current)-60,(canvas_date.height /2) + textHeight/2);
             ctx_date.stroke();
             }
         
         }
         const draw_x_grid_date = () => {
 
+            // REMOVE DRAW FOR THIS FUNCTION WHEN JUST MOUSE MOVES
             let startingX = -(chart.current.current_candle_width / 2);
             
+            let candle_index = 0
+            // candles.current = candles.current.slice(0,30)
             candles.current.forEach(item => {
+                
                 const x = Math.floor(startingX - current_x_spacing.current);
+         
+                const date = new Date(candles.current[candle_index]?.date);
+                
+                const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(-2)}`;
+                const metrics = ctx_date.measureText(formattedDate);
+                const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
                 ctx.save()
                 ctx.beginPath(); 
-                ctx_date.fillText('5/13/25', x-25, 30);
+                ctx_date.fillText(formattedDate, x-25, (canvas_date.height /2) + textHeight/2);
                 ctx.stroke();
                 ctx.restore();
             
                 startingX -= chart.current.x_grid_width;
+                let current_index = -Math.trunc(startingX/chart.current.current_full_candle_width)
+                candle_index = current_index
+    
+   
+
             });
+   
 
   
         }
-
-
 
         // Mouse Events
         const handleMouseMove = (e) => {
             mouseX.current = e.clientX - canvas.getBoundingClientRect().left;
             mouseY.current = e.clientY - canvas.getBoundingClientRect().top;
             
-            
+            // console.log(mouseX.current, mouseY.current)
             if(mousePressedRef.current){   
               
                 // x
@@ -578,17 +626,21 @@ export const Candle_Chart = (props) => {
             animationFrameId = requestAnimationFrame(draw); 
         };
         const handleResize = () => {
-          canvas.width = canvas.offsetWidth;
-          canvas.height = canvas.offsetHeight;
+        //   canvas.width = canvas.offsetWidth;
+        //   canvas.height = canvas.offsetHeight;
           draw(); 
         };
         const handleResize_price = () => {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
+            // canvas.width = canvas.offsetWidth;
+            // canvas.height = canvas.offsetHeight ;
             draw(); 
         };
-        const mouseWheel = (e) => {
-     
+        const candle_height_zoom = (e) => {
+
+            let threshold = Math.floor(chart.current.starting_price_unit_pixel_size * 0.5)
+
+            let expand_threshold = Math.floor(chart.current.starting_price_unit_pixel_size * 1.5)
+        
             const zoomOut = () => {
 
                 shrink_expand_height.current += current_mid_price.current
@@ -597,49 +649,41 @@ export const Candle_Chart = (props) => {
                 const added_height = current_mid_price.current * -1;
                 current_canvas_height.current += added_height;
                 prev_canvas_height.current = current_canvas_height.current;
-         
-                const zoomLevels = [
-                    { threshold: 80, unit_size_increase: 5 , unit_amount: 5},
-                    { threshold: 200, unit_size_increase: 2 , unit_amount: 10},
-                    { threshold: 290, unit_size_increase: 2, unit_amount: 20},
-                    { threshold: 370, unit_size_increase: 2.5 , unit_amount: 50},
-                    { threshold: 550, unit_size_increase: 2 , unit_amount: 100},
-                    { threshold: 690, unit_size_increase: 5 , unit_amount: 500},
-                    { threshold: 880, unit_size_increase: 5, unit_amount: 2500},
-                    { threshold: 1300, unit_size_increase: 2 , unit_amount: 5000},
-                    { threshold: 1500, unit_size_increase: 2 , unit_amount: 10000},
-                    { threshold: 1550, unit_size_increase: 5 , unit_amount: 50000},
-                ];
-                for (const level of zoomLevels) {
-                    if (zoom_level.current === level.threshold) {
-                        
-                        // Increase Unit Size
-                        current_pixels_per_price_unit.current *= level.unit_size_increase;
-                        prev_pixels_per_price_unit.current = current_pixels_per_price_unit.current;
-                        
-                        // Increase Displayed Numbers
-                        price_counter.current *= level.unit_size_increase;
-                        
-                        // Adjust Height
-                        let current_height = current_canvas_height.current / current_pixels_per_price_unit.current;
-                        let total_height = starting_canvas_height.current / current_pixels_per_price_unit.current;
-                        
-                        // Track Mid
-                        let current_mid = (total_height / 2) - (total_height - current_height);
-                        current_mid_price.current = current_mid;
-                        prev_mid_price.current = current_mid;
 
-                        // Adjust Unit Amount
-                        unit_amount.current = level.unit_amount
+                chart.current.current_price_unit_pixel_size = Math.floor(chart.current.current_price_unit_pixel_size -1)
+                
 
-                        break;
-                    }
+                if (chart.current.current_price_unit_pixel_size === threshold) {
+
+                    chart.current.grid_size_count+=1
+                    
+                    // Increase Unit Size
+                    current_pixels_per_price_unit.current *= 2;
+                    prev_pixels_per_price_unit.current *= 2;
+                    
+                    // Increase Displayed Numbers
+                    price_counter.current *= 2;
+                    
+                    // Adjust Height
+                    let current_height = current_canvas_height.current / current_pixels_per_price_unit.current;
+                    let total_height = starting_canvas_height.current / current_pixels_per_price_unit.current;
+                    
+                    // Track Mid
+                    let current_mid = (total_height / 2) - (total_height - current_height);
+                    current_mid_price.current = current_mid;
+                    prev_mid_price.current = current_mid;
+
+                    unit_amount.current *= 2
+                    chart.current.current_price_unit_pixel_size = current_pixels_per_price_unit.current
+
+                    // break;
                 }
+                
                 const add_shrink_expand_to_candle_top = (obj) => {
+
 
                     let res = (obj.close - obj.open) / unit_amount.current
                     res = res * current_pixels_per_price_unit.current
-
                     return Math.trunc(-res);
                 }
                 const add_shrink_expand_to_candle = (price, mid_price, height_counter, static_open, obj) => {
@@ -651,13 +695,14 @@ export const Candle_Chart = (props) => {
 
                     return Math.trunc(-res);
                 }
+                // candles.current = candles.current.slice(0,1)
                 candles.current = candles.current.map((obj) => {
                
-                
+               
                     return {
                         ...obj,
                         current_high: add_shrink_expand_to_candle(obj.high,current_mid_price.current,1,obj.prev_high),
-                        current_height: add_shrink_expand_to_candle_top(obj),
+                        current_height: Math.abs(obj.current_height) > 1 ? add_shrink_expand_to_candle_top(obj) : 1,
                         current_bottom: add_shrink_expand_to_candle(obj.open,current_mid_price.current,1,obj.prev_bottom, obj),
                         current_low: add_shrink_expand_to_candle(obj.low,current_mid_price.current,1,obj.prev_low)
                     };
@@ -665,48 +710,52 @@ export const Candle_Chart = (props) => {
                 
             };
             const zoomIn = () => {
-
+                
                 shrink_expand_height.current -= current_mid_price.current
                 zoom_level.current -= 1;
                 current_pixels_per_price_unit.current += 1;
                 const added_height = current_mid_price.current * -1;
                 current_canvas_height.current -= added_height;
                 prev_canvas_height.current = current_canvas_height.current;
+
+                chart.current.current_price_unit_pixel_size = Math.floor(chart.current.current_price_unit_pixel_size +1)
               
-                const zoomLevels = [
-                    { threshold: 80, multiplier: 5 , pixel_size_reducer: 1},
-                    { threshold: 200, multiplier: 2 , pixel_size_reducer: 5},
-                    { threshold: 290, multiplier: 2, pixel_size_reducer: 10},
-                    { threshold: 370, multiplier: 2.5 , pixel_size_reducer: 20},
-                    { threshold: 550, multiplier: 2 , pixel_size_reducer: 50},
-                    { threshold: 690, multiplier: 5 , pixel_size_reducer: 100},
-                    { threshold: 880, multiplier: 5, pixel_size_reducer: 500},
-                    { threshold: 1300, multiplier: 2 , pixel_size_reducer: 2500},
-                    { threshold: 1500, multiplier: 2 , pixel_size_reducer: 5000},
-                    { threshold: 1550, multiplier: 5 , pixel_size_reducer: 10000},
-                ];
-                for (const level of zoomLevels) {
-                    if (zoom_level.current === level.threshold) {
+                // const zoomLevels = [
+                //     { threshold: 80, multiplier: 5 , pixel_size_reducer: 1},
+                //     { threshold: 200, multiplier: 2 , pixel_size_reducer: 5},
+                //     { threshold: 290, multiplier: 2, pixel_size_reducer: 10},
+                //     { threshold: 370, multiplier: 2.5 , pixel_size_reducer: 20},
+                //     { threshold: 550, multiplier: 2 , pixel_size_reducer: 50},
+                //     { threshold: 690, multiplier: 5 , pixel_size_reducer: 100},
+                //     { threshold: 880, multiplier: 5, pixel_size_reducer: 500},
+                //     { threshold: 1300, multiplier: 2 , pixel_size_reducer: 2500},
+                //     { threshold: 1500, multiplier: 2 , pixel_size_reducer: 5000},
+                //     { threshold: 1550, multiplier: 5 , pixel_size_reducer: 10000},
+                // ];
+                // for (const level of zoomLevels) {
+                    if (chart.current.current_price_unit_pixel_size === expand_threshold) {
                     
                         // Descrease Unit Pixel Size
-                        current_pixels_per_price_unit.current /= level.multiplier;
-                        prev_pixels_per_price_unit.current = current_pixels_per_price_unit.current;
+                        current_pixels_per_price_unit.current /= 2;
+                        prev_pixels_per_price_unit.current /= 2;
 
                         // Descrease Displayed Numbers
-                        price_counter.current /= level.multiplier;
+                        price_counter.current /= 2;
             
                         let current_height = current_canvas_height.current / current_pixels_per_price_unit.current;
                         let total_height = starting_canvas_height.current / current_pixels_per_price_unit.current;
+                     
+                        // Track Mid
                         let current_mid = (total_height / 2) - (total_height - current_height);
-            
                         current_mid_price.current = current_mid;
                         prev_mid_price.current = current_mid;
          
-                        unit_amount.current = level.pixel_size_reducer
+                        unit_amount.current /= 2
+                        chart.current.current_price_unit_pixel_size = current_pixels_per_price_unit.current
 
-                        break;
+                   
                     }
-                }   
+                
                 const add_shrink_expand_to_candle_top = (obj) => {
                     let res = (obj.close - obj.open) / unit_amount.current
                     res = res * current_pixels_per_price_unit.current
@@ -739,52 +788,17 @@ export const Candle_Chart = (props) => {
             if (!animationFrameId) {
                 animationFrameId = requestAnimationFrame(draw);
             }
-        };
-        const draw = () => {
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath();
-
-            ctx_price.clearRect(0, 0, cp.width, cp.height);
-
-            // ctx.beginPath();
-            // ctx.strokeStyle = 'yellow';
-            // ctx.lineWidth = 1;
-            // ctx.moveTo(0, starting_canvas_height.current / 2);
-            // ctx.lineTo(canvas.width, starting_canvas_height.current / 2);
-            // ctx.stroke();
-
-            drawGrid();
-            draw_x_grid()
-            
-            drawCandles();
-            drawWicks();
-            drawPrices();
-            draw_Y_mouse()
-            draw_Y_price_tag()
-            draw_X_mouse()
-
-            plot_y_price_tag()
-            
-            ctx_date.clearRect(0, 0, canvas_date.width, canvas_date.height);
-            
-            draw_x_grid_date();
-            draw_X_date_tag()
-            draw_date_text()
-            
-            animationFrameId = null;
-
+            // console.log('==================')
+            // console.log('starting_price_unit_pixel_size:',chart.current.starting_price_unit_pixel_size)
+            // console.log('current_price_unit_pixel_size:',chart.current.current_price_unit_pixel_size)
+            // console.log('threshold:',expand_threshold)
+            // console.log('unit amount:', unit_amount.current)
+            // console.log('---:',chart.current.current_price_unit_pixel_size,threshold)
         };
         const candle_width_zoom = (event) => {
-  
-            const zoomIn = () => {      
-                
-                console.log('=================')
-                
-                console.log('candle_width',chart.current.current_candle_width)
-                console.log('space between:',chart.current.current_pixels_between_candles)
-          
-        
+            
+   
+            const zoomIn = () => {       
                 // Increase Grid Width
                 chart.current.x_grid_width += chart.current.x_grid_increaser
                 // Increase Space Between Candles
@@ -815,11 +829,7 @@ export const Candle_Chart = (props) => {
               
             }
             const zoomOut = () => {
-                console.log('=================')
-                
-                console.log('candle_width',chart.current.current_candle_width)
-                console.log('space between:',chart.current.current_pixels_between_candles)
-                
+          
                 // Decrease Grid Width
                 chart.current.x_grid_width -= chart.current.x_grid_increaser
                 // Decrease Space Between Pixels
@@ -859,6 +869,42 @@ export const Candle_Chart = (props) => {
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             animationFrameId = requestAnimationFrame(draw); 
         }
+        const draw = () => {
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+
+            ctx_price.clearRect(0, 0, cp.width, cp.height);
+            
+            // ctx.beginPath();
+            // ctx.strokeStyle = 'yellow';
+            // ctx.lineWidth = 1;
+            // ctx.moveTo(0, starting_canvas_height.current/2);
+            // ctx.lineTo(canvas.width, starting_canvas_height.current/2);
+            // ctx.stroke();
+
+            drawGrid();
+            draw_x_grid()
+            
+            drawCandles();
+            drawWicks();
+            drawPrices();
+            draw_Y_mouse()
+            draw_Y_price_tag()
+            draw_X_mouse()
+
+            plot_y_price_tag()
+            
+            ctx_date.clearRect(0, 0, canvas_date.width, canvas_date.height);
+            
+            draw_x_grid_date();
+            draw_X_date_tag()
+            draw_date_text()
+            
+            animationFrameId = null;
+
+        };
+        
 
         canvas.addEventListener('mousemove', handleMouseMove);
         canvas.addEventListener('mouseup', handleMouseUpPrices);
@@ -869,7 +915,7 @@ export const Candle_Chart = (props) => {
         cp.addEventListener('mouseup', handleMouseUpPrices);
         cp.addEventListener('mousedown', handleMouseDownPrices);
         cp.addEventListener('resize', handleResize_price);
-        cp.addEventListener('wheel', mouseWheel)
+        cp.addEventListener('wheel', candle_height_zoom)
 
         draw();
         
@@ -885,7 +931,7 @@ export const Candle_Chart = (props) => {
             cp.removeEventListener('mouseup', handleMouseUpPrices);
             cp.removeEventListener('mousedown', handleMouseDownPrices);
             cp.removeEventListener('resize', handleResize_price);
-            cp.removeEventListener('wheel', mouseWheel)
+            cp.removeEventListener('wheel', candle_height_zoom)
     
         };
     }, [selected_candles]);

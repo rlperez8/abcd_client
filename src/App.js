@@ -16,6 +16,12 @@ const App = () => {
   const [searchValue, setSearchValue] = useState('');
   const asset_types = ['All','Stock','ETF','Crypto']
   const [asset_type, set_asset_type] = useState('All')
+  const [current_abcds, set_current_abcds] = useState([])
+  const [canvas_dimesions, set_canvas_dimensions] = useState({
+    chart_height: 0,
+    price_height: 0,
+    date_height: 0
+  })
 
 
   const get_listed_tickers = async (searched_ticker, selected_type) => {
@@ -38,6 +44,28 @@ const App = () => {
      
       // console.log(responseData.data)
       set_listing_status(responseData.data)
+     
+    } catch (error) {
+      console.error("Error during fetch:", error);
+  }}
+  const get_abcd_of_selected_symbol = async () => {
+    try {
+        const res = await fetch('http://localhost:8000/get_abcd_of_selected_symbol', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          symbol: ticker_symbol,
+        })
+      });
+      if (!res.ok) {
+        console.error(`Server Error: ${res.status} - ${res.statusText}`);
+        throw new Error("Request failed");
+      }
+      const responseData = await res.json();
+     
+      set_current_abcds(responseData.data)
      
     } catch (error) {
       console.error("Error during fetch:", error);
@@ -92,11 +120,11 @@ const App = () => {
         color: item.candle_open > item.candle_close ? '#ef5350' : '#26a69a'
     }))
 
-   
-      let chartHeight = chart_container.current.clientHeight-51
-      
+  
+      let chartHeight = canvas_dimesions.chart_height
+
       const current_pixels_per_price_unit = chartHeight / 10
- 
+
       const toCanvasY = (price) => {
           let a = price *current_pixels_per_price_unit
           let price_px =  -(a - chartHeight)
@@ -136,9 +164,9 @@ const App = () => {
 
     get_selected_candles('A'); 
     get_listed_tickers('',asset_type)
+    get_abcd_of_selected_symbol('A')
   
   }, [])  
-
   return (
 
       <div className='App' >
@@ -221,19 +249,80 @@ const App = () => {
 
           )
         }
-        
-        <div className='menu'></div>
-        <div className='data' ref={chart_container}>
+
+         <div className='data' >
+           <div className='data_inner' ref={chart_container}>
           <Candle_Chart 
             selected_candles={formatted_candles} 
             chart_height={chart_height}
             set_is_listing_status={set_is_listing_status}
             is_listing_status={is_listing_status}
             ticker_symbol={ticker_symbol}
+            set_canvas_dimensions={set_canvas_dimensions}
             
             />
           </div>
+            </div>
         
+        <div className='menu'>
+          <div className='menu_inner'>
+
+             <div className='abcd_title'>ABCDs</div>
+
+             
+            <div className='abcd_header'>
+              <div className='abcd_column1'>Result</div>
+              <div className='abcd_column1'>Enter Date</div>
+              <div className='abcd_column1'>Exit Date</div>
+              <div className='abcd_column1'>Length</div>
+              <div className='abcd_column1'>Enter</div>
+              <div className='abcd_column1'>Exit</div>
+              <div className='abcd_column1'>RIO</div>
+              
+              <div className='abcd_column1'>Risk</div>
+              
+              <div className='abcd_column1'>Trade Length</div>
+              <div className='abcd_column1'>Trade Length</div>
+              <div className='abcd_column1'>Trade Length</div>
+              <div className='abcd_column1'>Trade Length</div>
+
+            
+            </div>
+
+            <div className='abcd_rows_container'>
+              {current_abcds.map(abcd=>{
+            
+            return(<div className='abcd_row' onClick={()=>{}}>
+              
+      
+              <div className={abcd.trade_result === 'Win' ? 'abcd_column1_positive' : 'abcd_column1_negative'}>{abcd.trade_result}</div>
+              <div className='abcd_column1'>{abcd.trade_entered_date}</div>
+              <div className='abcd_column1'>{abcd.trade_exited_date}</div>
+              <div className='abcd_column1'>{abcd.pattern_ABCD_bar_length}</div>
+              <div className='abcd_column1'>${abcd.trade_entered_price}</div>
+              <div className='abcd_column1'>${abcd.trade_exited_price}</div>
+              <div className={abcd.trade_result === 'Win' ? 'abcd_column1_positive' : 'abcd_column1_negative'}>{abcd.trade_return_percentage}%</div>
+              
+              <div className={parseFloat(abcd.trade_risk) > 0 ? 'abcd_column1_positive' : 'abcd_column1_negative'}>{abcd.trade_risk}%</div>
+            
+
+              
+              <div className='abcd_column1'>{abcd.trade_duration_bars}</div>
+              <div className='abcd_column1'>{abcd.trade_duration_bars}</div>
+              <div className='abcd_column1'>{abcd.trade_duration_bars}</div>
+              <div className='abcd_column1'>{abcd.trade_duration_bars}</div>
+              
+      
+            </div>)
+            })}
+            </div>
+
+            
+            </div>
+          
+
+        </div>
+           
 
 
 
