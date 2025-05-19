@@ -1,70 +1,124 @@
-# Getting Started with Create React App
+# 📈 ABCD Pattern Screener & Chart Pattern Visualization Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is a full-stack screener and charting tool for detecting and visualizing ABCD patterns — and ultimately, any custom chart patterns. Built with Python, Backtrader, PostgreSQL, and React, it features a custom HTML5 Canvas-based candlestick chart for interactive visualization.
 
-## Available Scripts
+The long-term goal is to provide a **flexible, open-source platform** where traders and developers can build and share their own pattern detectors while using the same powerful charting engine to visualize them.
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## 🧠 Overview
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+At its core, this system does the following:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Scans historical stock data for **ABCD patterns**
+- Saves results to a **PostgreSQL database**
+- Provides a **React frontend** to view and interact with pattern data
+- Uses a **Canvas-based candlestick chart** to visually draw ABCD patterns
+- Supports extensibility so **any pattern or dataset** can be visualized the same way
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 🧱 Tech Stack
 
-### `npm run build`
+- **Python + Backtrader** – Strategy engine for ABCD pattern detection
+- **PostgreSQL** – Stores pattern data
+- **React** – Frontend UI for browsing and viewing screener results
+- **Canvas API** – Custom rendering for interactive candlestick charts
+- **(Optional) Flask or FastAPI** – API layer between frontend and database
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+---
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 📊 What Is the ABCD Pattern?
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The ABCD pattern is a well-known, reliable chart formation based on price symmetry. It consists of four points (A, B, C, D), where:
 
-### `npm run eject`
+- AB and CD are typically equivalent price legs
+- BC is a retracement of AB
+- D often represents a reversal or continuation point
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 🚀 How It Works
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 1. Pattern Detection
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+The backend runs a Python script using Backtrader that:
 
-## Learn More
+- Loads OHLCV data for a symbol
+- Identifies ABCD pattern candidates based on price and time symmetry
+- Outputs a list of patterns to be stored
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### 2. Data Storage
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Each detected ABCD pattern is stored in a PostgreSQL database with detailed metadata. This schema supports flexible filtering, historical tracking, and visual rendering of chart patterns.
 
-### Code Splitting
+Each leg of the pattern includes precise date ranges and OHLC (Open, High, Low, Close) pricing:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+#### A-Leg
+- `pattern_A_start_date`
+- `pattern_A_pivot_date`
+- `pattern_A_end_date`
+- `pattern_A_open`
+- `pattern_A_high`
+- `pattern_A_low`
+- `pattern_A_close`
 
-### Analyzing the Bundle Size
+#### B-Leg
+- `pattern_B_start_date`
+- `pattern_B_pivot_date`
+- `pattern_B_end_date`
+- `pattern_B_open`
+- `pattern_B_high`
+- `pattern_B_low`
+- `pattern_B_close`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+#### C-Leg
+- `pattern_C_start_date`
+- `pattern_C_pivot_date`
+- `pattern_C_end_date`
+- `pattern_C_open`
+- `pattern_C_high`
+- `pattern_C_low`
+- `pattern_C_close`
 
-### Making a Progressive Web App
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### 🔹 Pattern-Level Metrics
 
-### Advanced Configuration
+Additional computed values for each ABCD pattern include:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+- `pattern_AB_start_date`
+- `pattern_AB_end_date`
+- `pattern_AB_bar_length`
+- `pattern_ABC_start_date`
+- `pattern_ABC_end_date`
+- `pattern_ABC_bar_length`
+- `pattern_BC_bar_length`
+- `pattern_C_bar_retracement`
+- `pattern_C_price_retracement`
+- `pattern_ABCD_start_date`
+- `pattern_ABCD_id` (unique identifier)
 
-### Deployment
+### 3. Visualization
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+The React frontend:
 
-### `npm run build` fails to minify
+- Lists all detected patterns with filters
+- Allows users to select a pattern and time frame
+- Renders an interactive candlestick chart via HTML5 Canvas
+- Overlays ABCD lines and labels on top of the chart
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
+
+## 🌐 Open Source Vision & Extensibility
+
+This project isn’t just about ABCD patterns — it’s a **foundation for detecting and visualizing any pattern**.
+
+### 🔌 Pluggable Pattern Detection
+
+Long term plan is to you will be able to build your own custom pattern detector and feed its output into the same database/charting layer.
+
+
+
+
+
