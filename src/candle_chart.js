@@ -1,5 +1,6 @@
 import React, {useState, useRef, useEffect} from "react";
 import './new.css'
+import { handle_BaselineY } from './candle_chart_tools.js';
 
 export const Candle_Chart = (props) => {
 
@@ -9,65 +10,42 @@ export const Candle_Chart = (props) => {
         is_listing_status,
         ticker_symbol,
         set_canvas_dimensions,
-        selected_abcd
+        selected_abcd,
+        selected_ab
 
 	} = props
-
+    
+    console.log(selected_candles)
     const canvas_dates = useRef()
     const canvas_price = useRef()
     const canvas_chart = useRef()
     const mousePressedRef = useRef(false);
     const mouse_pressed_on_prices = useRef(false)
-    const canvas_height = useRef(0);
     const mouseX = useRef()
     const mouseY = useRef()
     const y_coord_on_mouse_click = useRef(0)
     const x_coord_on_mouse_click = useRef(0)
-    const current_y_spacing = useRef(0)
-    const prev_y_spacing = useRef(0)
-    const current_x_spacing = useRef(0)
-    const prev_x_spacing = useRef(0)
-    const starting_canvas_height = useRef(0)
-    const current_canvas_height = useRef(0)
-    const prev_canvas_height = useRef(0)
-    const starting_canvas_width = useRef(0)
-    const current_canvas_width = useRef(0)
-    const prev_canvas_width = useRef(0)
-    
-    const candles = useRef([])
     const prev_shrink_expand = useRef(0)
     const current_shrink_expand = useRef(0)
-    const current_mid_price = useRef(0)
-    const prev_mid_price = useRef(0)
-    const prev_pixels_per_price_unit = useRef(0)
-    const current_pixels_per_price_unit = useRef(0)
     const height_counter = useRef(0)
-    const price_counter = useRef(1)
-    const zoom_level = useRef(0)
-    const unit_amount = useRef(1)
-    const static_mid = useRef(0)
-    const shrink_expand_height = useRef(0)
     const [candle_high, set_candle_high] = useState(0)
     const [candle_close, set_candle_close] = useState(0)
     const [candle_open, set_candle_open] = useState(0)
     const [candle_low, set_candle_low] = useState(0)
     const [candle_color, set_candle_color] = useState('')
-    const pixels_between_candles = useRef(5)
-
+    const current_hovered_candle_index = useRef(0)
     const candle_width = useRef(10)
     const chart = useRef({
         current_pixels_between_candles: 5, 
-        current_candle_width: 10,
-        current_full_candle_width: 15,
+        current_candle_width: 11,
+        current_full_candle_width: 16,
         x_grid_increaser: 10,
-        x_grid_width: (10 + 5) * 10,
-
+        x_grid_width: 16*10,
         y_grid_height: 0,
         starting_price_unit_pixel_size: 0,
         current_price_unit_pixel_size: 0,
         grid_size_count: 0
     })
-
     let [abcd, set_abcd] = useState({
         a: 0,
         b: 0,
@@ -77,13 +55,16 @@ export const Candle_Chart = (props) => {
         b_price: 0,
         c_price: 0,
         d_price: 0,
+        x_date: 0,
+        x_price: 0,
+        exit_price: 0,
+        exit_date: 0,
+        result: 0
     })
+    const candleChartRef = useRef()
 
-    const x_grid_size = useRef(15)
-    const x_grid_size_increaser = useRef(10)
-
-    // Canvas Re-Size
     useEffect(() => {
+        // console.log(selected_candles[0])
         const resizeCanvas = () => {
 
             if (!canvas_chart.current || !canvas_price.current) return;
@@ -95,73 +76,9 @@ export const Candle_Chart = (props) => {
                 canvas.style.height = '100%';
                 canvas.height = canvas.offsetHeight;
                 canvas.width = canvas.offsetWidth;
-                
-                // Canvas Chart Height
-                canvas_height.current = canvas.height 
-                starting_canvas_height.current = canvas.height 
-                current_canvas_height.current = canvas.height 
-                prev_canvas_height.current =canvas.height 
-                
-
-                // Canvas Chart Width
-                starting_canvas_width.current = canvas.width
-                current_canvas_width.current = canvas.width
-                prev_canvas_width.current = canvas.width
-
-                // Price Unit Height
-                chart.current.starting_price_unit_pixel_size = current_canvas_height.current / 10
-                chart.current.current_price_unit_pixel_size = current_canvas_height.current / 10
-
-
-                prev_pixels_per_price_unit.current = current_canvas_height.current / 10
-                current_pixels_per_price_unit.current = current_canvas_height.current / 10
-                current_mid_price.current = 5
-                prev_mid_price.current = 5
-                static_mid.current = 5
-                candles.current = selected_candles
-
-                let candle_loc = selected_candles[0]?.open*(starting_canvas_height.current / 10)
-
-                
-                
-                let res =  selected_candles[0]?.open / 1
-                res = res * current_pixels_per_price_unit.current
-                res = res - starting_canvas_height.current
-        
-                // Starting Height
-                current_canvas_height.current = candle_loc + (starting_canvas_height.current / 2)
-                prev_canvas_height.current = candle_loc + (starting_canvas_height.current / 2)
-
-                // Starting Y
-                current_y_spacing.current = -candle_loc + (starting_canvas_height.current / 2)
-                prev_y_spacing.current = -candle_loc+ (starting_canvas_height.current / 2)
-
-                // Starting X
-                current_x_spacing.current = ((candle_width.current+5) * selected_candles.length) - (canvas.width/2)
-                prev_x_spacing.current = ((candle_width.current+5) * selected_candles.length) - (canvas.width/2)
-                current_x_spacing.current = -(canvas.width/2)
-                prev_x_spacing.current = -(canvas.width/2)
-
-                // Starting Mid
-                current_mid_price.current = selected_candles[0]?.open
-                prev_mid_price.current = selected_candles[0]?.open
-                static_mid.current =selected_candles[0]?.open
-
-                // Candle Width
-                // x_grid_size.current = (candle_width.current + pixels_between_candles.current) * 10
-
-     
-
-
-                // Reset 
-                zoom_level.current = 0
-                shrink_expand_height.current = 0
-                price_counter.current = 1
-                unit_amount.current = 1
-
-
                 const canvas_ = canvas_price.current;
                 const ctx_ = canvas_.getContext('2d');
+
                 if (!ctx_) return;
                 canvas_.style.width = '100%';
                 canvas_.style.height = '100%';
@@ -176,18 +93,96 @@ export const Candle_Chart = (props) => {
                 canvas_date.height = canvas_date.offsetHeight;
                 canvas_date.width = canvas_date.offsetWidth;
 
+                const PRICE_UNIT_DIVISOR = 10;
+                const PRICE_MID = 5;
+                candleChartRef.current = {
+                    canvas,
+                    ctx,
+                    // canvas.style.height = "100%"
+                    //   - This is CSS.
+                    //   - It sets how tall the canvas *looks* on the page (relative to its parent).
+                    //   - Does NOT change the canvas’s internal pixel grid for drawing.
+
+                    // canvas.offsetHeight
+                    //   - This is JavaScript (read-only).
+                    //   - It gives the *actual rendered height in pixels* of the canvas on the page.
+                    //   - Use this to set the canvas’s internal drawing size (canvas.height) so drawings aren’t blurry.
+                    width: {
+                        style_width: (canvas.style.width = "100%"),
+                        width: canvas.offsetWidth,
+                        starting_canvas_width: canvas.offsetWidth,
+                        current_canvas_width: canvas.offsetWidth,
+                        prev_canvas_width: canvas.offsetWidth,
+                        prev_X_OffSet: 0,
+                        current_X_OffSet: 0,
+                    },
+                    height: {
+                        style_height: (canvas.style.height = "100%"),
+                        height: 0,
+                        previousBaselineY: 0,
+                        startingBaselineY: 0,
+                        currentBaselineY: 0,
+                        initialBaselineY: 0,
+                        prev_Y_OffSet: 0,
+                        current_Y_OffSet: 0,
+                        
+                    },
+                    price: {
+                        starting_price_unit_pixel_size: 0,
+                        current_price_unit_pixel_size: 0,
+                        prev_pixels_per_price_unit: 0,
+                        prev_mid_price: PRICE_MID,
+                        current_mid_price: PRICE_MID,
+                        static_mid: PRICE_MID,
+                        current_pixels_per_price_unit: 0
+
+                    },
+                    candles: {
+                        candles: selected_candles,
+                        starting_candle_Y: selected_candles[0]?.open * (canvas.height / PRICE_UNIT_DIVISOR)
+                    },
+                    zoom: {
+                        current: 0,
+                        shrink_expand_height: 0
+                    },
+                    price_counter: 1,
+                    unit_amount: 1
+                    
+                }   
+                candleChartRef.current = handle_BaselineY(candleChartRef)
+                candleChartRef.current.height.startingBaselineY = canvas.offsetHeight
+                candleChartRef.current.height.currentBaselineY = canvas.offsetHeight
+                candleChartRef.current.height.previousBaselineY = canvas.offsetHeight
+                candleChartRef.current.width.starting_canvas_width = canvas.width
+                candleChartRef.current.width.current_canvas_width = canvas.width
+                candleChartRef.current.width.prev_canvas_width = canvas.width
+                candleChartRef.current.price.starting_price_unit_pixel_size  = candleChartRef.current.height.currentBaselineY / 10
+                candleChartRef.current.price.current_price_unit_pixel_size = candleChartRef.current.height.currentBaselineY / 10
+                candleChartRef.current.price.prev_pixels_per_price_unit = candleChartRef.current.height.currentBaselineY / 10
+                candleChartRef.current.price.current_pixels_per_price_unit = candleChartRef.current.height.currentBaselineY / 10
+                candleChartRef.current.candles.candles = selected_candles
+                candleChartRef.current.candles.starting_candle_Y = selected_candles[0]?.open * (canvas.height  / 10)     
+                candleChartRef.current.height.currentBaselineY = (candleChartRef.current.candles.starting_candle_Y + candleChartRef.current.height.startingBaselineY) - (candleChartRef.current.height.startingBaselineY / 2)
+                candleChartRef.current.height.previousBaselineY = (candleChartRef.current.candles.starting_candle_Y + candleChartRef.current.height.startingBaselineY) - (candleChartRef.current.height.startingBaselineY / 2)       
+                candleChartRef.current.height.current_Y_OffSet = -candleChartRef.current.candles.starting_candle_Y + (candleChartRef.current.height.startingBaselineY / 2)
+                candleChartRef.current.height.prev_Y_OffSet = -candleChartRef.current.candles.starting_candle_Y+ (candleChartRef.current.height.startingBaselineY / 2)
+                candleChartRef.current.width.current_X_OffSet = -(canvas.width/2)
+                candleChartRef.current.width.prev_X_OffSet = -(canvas.width/2)
+                candleChartRef.current.price.current_mid_price = selected_candles[0]?.open
+                candleChartRef.current.price.prev_mid_price = selected_candles[0]?.open
+                candleChartRef.current.price.static_mid =selected_candles[0]?.open
+                candleChartRef.current.zoom.current = 0
+                candleChartRef.current.zoom.shrink_expand_height = 0
+                candleChartRef.current.price_counter = 1
+                candleChartRef.current.unit_amount = 1
 
                 set_canvas_dimensions((prev)=> ({
                     ...prev,
                     chart_height: canvas.height,
                     price_height: canvas_.height,
                     date_height: canvas_date.height
-
                 }))
-
-        
         };
-      
         // Run on mount
         resizeCanvas();
       
@@ -199,46 +194,6 @@ export const Candle_Chart = (props) => {
         };
     }, [selected_candles]);
     
-    const handleMouseDown = () => {
-        mousePressedRef.current = true;
-        y_coord_on_mouse_click.current = mouseY.current
-        x_coord_on_mouse_click.current = mouseX.current
-
-      
-    };
-    const handleMouseDownPrices = () => {
-        mouse_pressed_on_prices.current = true;
-        y_coord_on_mouse_click.current = mouseY.current
-        x_coord_on_mouse_click.current = mouseX.current
-    };
-    const handleMouseUp = () => {
-        mousePressedRef.current = false;
-        prev_canvas_height.current = current_canvas_height.current
-        prev_y_spacing.current = current_y_spacing.current
-        prev_canvas_width.current = current_canvas_width.current
-        prev_x_spacing.current = current_x_spacing.current
-        prev_mid_price.current = current_mid_price.current
-        prev_pixels_per_price_unit.current = current_pixels_per_price_unit.current
-
-        
-    };
-    const handleMouseUpPrices = () => {
-        mouse_pressed_on_prices.current = false;
-        prev_shrink_expand.current = current_shrink_expand.current
-        prev_canvas_height.current = current_canvas_height.current
-        prev_mid_price.current = current_mid_price.current
-        prev_pixels_per_price_unit.current = current_pixels_per_price_unit.current
-        height_counter.current = 0
-        for (const candle of candles.current) {
-            candle.prev_high = candle.current_high;
-            candle.prev_bottom = candle.current_bottom;
-            candle.prev_low = candle.current_low;
-            candle.prev_height = candle.current_height;
-        }
-
-      
-    };
-
     // Canvas Chart
     useEffect(() => {
         
@@ -275,13 +230,13 @@ export const Candle_Chart = (props) => {
         const drawGrid = () => {
             ctx.save()
             ctx.beginPath();
-            ctx.strokeStyle = 'gray';
-            ctx.lineWidth = .2;
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = .5;
                   
             for (
-                let y = current_canvas_height.current; 
+                let y = candleChartRef.current.height.currentBaselineY; 
                 y > 0; 
-                y -= current_pixels_per_price_unit.current
+                y -= candleChartRef.current.price.current_pixels_per_price_unit
             ) {
                 const yPos = Math.floor(y);
                 ctx.moveTo(0, yPos);
@@ -295,18 +250,17 @@ export const Candle_Chart = (props) => {
 
             ctx.save()
             ctx.beginPath();
-            ctx.strokeStyle = 'gray';
-            ctx.lineWidth = .2;
-            
-            // let full_candle_width = candle_width.current + 5
-            let full_candle_width = chart.current.current_candle_width + 5
-            let starting_x_loc = -(full_candle_width/2)+2.5
-            let ending_x_loc = -(starting_canvas_width.current - current_x_spacing.current)
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = .5;
+
+
+            let starting_x_loc = -(chart.current.current_full_candle_width/2)
+            let ending_x_loc = -(candleChartRef.current.width.starting_canvas_width - candleChartRef.current.width.current_X_OffSet)
 
             for (let y = starting_x_loc; y > ending_x_loc; y -= chart.current.x_grid_width) {
-                const yPos = Math.floor(y);
-                ctx.moveTo(yPos - current_x_spacing.current, 0);
-                ctx.lineTo(yPos - current_x_spacing.current, canvas.height);
+                const yPos = y;
+                ctx.moveTo(yPos - candleChartRef.current.width.current_X_OffSet, 0);
+                ctx.lineTo(yPos - candleChartRef.current.width.current_X_OffSet, canvas.height);
             }
             
             ctx.stroke();
@@ -314,36 +268,35 @@ export const Candle_Chart = (props) => {
 
         }
         const drawCandles = () => {
-    
-            let startingX = 0;
-            // let candleWidth = Math.max(1, Math.floor(candle_width.current));
+            
         
+            let startingX = -(chart.current.current_pixels_between_candles / 2)
+            candleChartRef.current.candles.candles.forEach(item => {
+        
+                    const x = Math.floor(startingX - candleChartRef.current.width.current_X_OffSet);
+                    const y = Math.floor(item.current_bottom - candleChartRef.current.height.current_Y_OffSet);
+                    const width = -chart.current.current_candle_width; // assuming this is negative for direction
+                    const height = Math.floor(item.current_height);
 
-          candles.current.forEach(item => {
-                const x = Math.floor(startingX - current_x_spacing.current);
-                const y = Math.floor(item.current_bottom - current_y_spacing.current);
-                const width = -chart.current.current_candle_width; // assuming this is negative for direction
-                const height = Math.floor(item.current_height);
+                    // Fill with black
+                    ctx.fillStyle = item.color;
+                    ctx.fillRect(x, y, width, height);
 
-                // Fill with black
-                ctx.fillStyle = "black";
-                ctx.fillRect(x, y, width, height);
+                    // Outline with item color
+                    ctx.strokeStyle = item.color;
+                    ctx.lineWidth = 1; // Adjust thickness if needed
+                    ctx.strokeRect(x, y, width, height);
 
-                // Outline with item color
-                ctx.strokeStyle = item.color;
-                ctx.lineWidth = 1; // Adjust thickness if needed
-                ctx.strokeRect(x, y, width, height);
-
-                startingX -= chart.current.current_candle_width + chart.current.current_pixels_between_candles;
-});
+                    startingX -= chart.current.current_candle_width + chart.current.current_pixels_between_candles;
+                });
         };
         const drawWicks = () => {
             // let startingX = -(candle_width.current / 2);
-            let startingX = -(chart.current.current_candle_width / 2);
-            candles.current.forEach(item => {
-                const x = Math.floor(startingX - current_x_spacing.current);
-                const yHigh = Math.floor(item.current_high - current_y_spacing.current);
-                const yLow = Math.floor(item.current_low - current_y_spacing.current);
+            let startingX = -(chart.current.current_full_candle_width / 2)
+            candleChartRef.current.candles.candles.forEach(item => {
+                const x = Math.floor(startingX - candleChartRef.current.width.current_X_OffSet);
+                const yHigh = Math.floor(item.current_high - candleChartRef.current.height.current_Y_OffSet);
+                const yLow = Math.floor(item.current_low - candleChartRef.current.height.current_Y_OffSet);
                 ctx.save()
                 ctx.beginPath(); // start fresh path per wick
                 ctx.strokeStyle = item.color;
@@ -360,7 +313,7 @@ export const Candle_Chart = (props) => {
         const drawPrices = () => {
             
 
-            const start_pixel = current_canvas_height.current
+            const start_pixel = candleChartRef.current.height.currentBaselineY
             const font_size = Math.floor(cp.width / 6);
             const x_position = cp.width / 4;
       
@@ -369,9 +322,9 @@ export const Candle_Chart = (props) => {
             
             
             let price = 0
-            for (let y = start_pixel; y >= 0; y -= current_pixels_per_price_unit.current) {
+            for (let y = start_pixel; y >= 0; y -= candleChartRef.current.price.current_pixels_per_price_unit) {
                 ctx_price.fillText(price.toFixed(2), x_position, y + 8); 
-                price += price_counter.current;
+                price += candleChartRef.current.price_counter;
             }
         }
 
@@ -391,27 +344,24 @@ export const Candle_Chart = (props) => {
         };
         const draw_X_mouse = () => {
             ctx.save()
-     
+            
+          
             // Find Current x-loc
             let mouse_x_loc = mouseX.current
-            let mouse_x_loc_with_x_spacing = -(mouse_x_loc + current_x_spacing.current)
-
-            // Track Candle Width
-            // let full_candle_width = candle_width.current + 5
-            let full_candle_width = chart.current.current_candle_width + 5
-
-            // Track X-Spacing
-            let spacing_in_candles = current_x_spacing.current / full_candle_width
+            let mouse_x_loc_with_x_spacing = Math.floor(-(mouse_x_loc + candleChartRef.current.width.current_X_OffSet))
+      
 
             // Track Index
-            let index = Math.floor(mouse_x_loc_with_x_spacing/full_candle_width)
-            
+            let index = Math.floor(mouse_x_loc_with_x_spacing/chart.current.current_full_candle_width) + 1
+            current_hovered_candle_index.current = index 
+         
 
-            let pixelStart = (index * full_candle_width) + (full_candle_width/2)
-            pixelStart = pixelStart - 2.5
+            let pixelStart = (index * (chart.current.current_full_candle_width)) - (chart.current.current_full_candle_width/2)
+         
+ 
        
             // const reversedCandles = [...candles].reverse();
-            const hoveredCandle = candles.current[index];
+            const hoveredCandle = candleChartRef.current.candles.candles[index-1];
             set_candle_high(hoveredCandle?.candle_high)
             set_candle_close(hoveredCandle?.candle_close)
             set_candle_open(hoveredCandle?.candle_open)
@@ -432,19 +382,29 @@ export const Candle_Chart = (props) => {
             ctx.lineWidth = 1
             ctx.strokeStyle = 'gray'
             ctx.setLineDash([5, 5]); 
-            ctx.moveTo(-pixelStart - current_x_spacing.current, canvas.height);    
-            ctx.lineTo(-pixelStart - current_x_spacing.current, 0); 
+            ctx.moveTo(-pixelStart - candleChartRef.current.width.current_X_OffSet, canvas.height);    
+            ctx.lineTo(-pixelStart - candleChartRef.current.width.current_X_OffSet, 0); 
 
-            // ctx.moveTo(-current_x_spacing.current, canvas.height);    
-            // ctx.lineTo(-current_x_spacing.current, 0); 
-            // ctx.moveTo(-current_x_spacing.current - (candle_width.current + 2.5 + 2.5), canvas.height);    
-            // ctx.lineTo(-current_x_spacing.current - (candle_width.current + 2.5 + 2.5), 0); 
+            // ctx.moveTo(-candleChartRef.current.width.current_X_OffSet, canvas.height);    
+            // ctx.lineTo(-candleChartRef.current.width.current_X_OffSet, 0); 
+
+            // let candle_size = chart.current.current_full_candle_width * 4
+            // let x_loc = -(candleChartRef.current.width.current_X_OffSet + candle_size)
+
+            // ctx.moveTo(-candleChartRef.current.width.current_X_OffSet - chart.current.current_full_candle_width, canvas.height);    
+            // ctx.lineTo(-candleChartRef.current.width.current_X_OffSet - chart.current.current_full_candle_width, 0); 
+
+            // ctx.moveTo(x_loc  , canvas.height);    
+            // ctx.lineTo(x_loc  , 0); 
+            
+            // ctx.moveTo(-candleChartRef.current.width.current_X_OffSet - chart.current.current_full_candle_width * 5 , canvas.height);    
+            // ctx.lineTo(-candleChartRef.current.width.current_X_OffSet - chart.current.current_full_candle_width * 5, 0); 
 
        
-            // ctx.moveTo(-current_x_spacing.current, canvas.height);    
-            // ctx.lineTo(-current_x_spacing.current, 0); 
-            // ctx.moveTo(-current_x_spacing.current + (candle_width.current + 2.5 + 2.5), canvas.height);    
-            // ctx.lineTo(-current_x_spacing.current +(candle_width.current + 2.5 + 2.5), 0); 
+            // ctx.moveTo(-candleChartRef.current.width.current_X_OffSet, canvas.height);    
+            // ctx.lineTo(-candleChartRef.current.width.current_X_OffSet, 0); 
+            // ctx.moveTo(-candleChartRef.current.width.current_X_OffSet + (candle_width.current + 2.5 + 2.5), canvas.height);    
+            // ctx.lineTo(-candleChartRef.current.width.current_X_OffSet +(candle_width.current + 2.5 + 2.5), 0); 
 
             ctx.stroke();
             ctx.restore();
@@ -474,13 +434,13 @@ export const Candle_Chart = (props) => {
             ctx_price.fillStyle = "#383838";
             ctx_price.fillStyle = "rgb(74, 13, 13)";
 
-            let x_loc = Math.abs(mouseY.current-starting_canvas_height.current)
-            let y_loc_price =x_loc/current_pixels_per_price_unit.current
-            let y_spacing_in_price = current_y_spacing.current/current_pixels_per_price_unit.current
+            let x_loc = Math.abs(mouseY.current-candleChartRef.current.height.startingBaselineY)
+            let y_loc_price =x_loc/candleChartRef.current.price.current_pixels_per_price_unit
+            let y_spacing_in_price = candleChartRef.current.height.current_Y_OffSet/candleChartRef.current.price.current_pixels_per_price_unit
 
-            let shrink_expand_in_price = shrink_expand_height.current / current_pixels_per_price_unit.current
+            let shrink_expand_in_price = candleChartRef.current.zoom.shrink_expand_height / candleChartRef.current.price.current_pixels_per_price_unit
    
-            let price = ((y_loc_price - y_spacing_in_price) - shrink_expand_in_price) * unit_amount.current
+            let price = ((y_loc_price - y_spacing_in_price) - shrink_expand_in_price) * candleChartRef.current.unit_amount
 
     
             ctx_price.fillStyle = "gray";
@@ -488,28 +448,29 @@ export const Candle_Chart = (props) => {
             ctx_price.fillText(price.toFixed(2), 20 , mouseY.current+5);
             ctx_price.stroke();
         }
+
         // Date
-        
         const draw_X_date_tag = () => {
             ctx_date.save()
             
 
             // Find Current x-loc
             let mouse_x_loc = mouseX.current
-            let mouse_x_loc_with_x_spacing = -(mouse_x_loc + current_x_spacing.current)
+            let mouse_x_loc_with_x_spacing = -(mouse_x_loc + candleChartRef.current.width.current_X_OffSet)
 
             // Track Candle Width
             // let full_candle_width = candle_width.current + 5
-            let full_candle_width = chart.current.current_candle_width + 5
+            // let full_candle_width = chart.current.current_candle_width + 5
+            let full_candle_width = chart.current.current_full_candle_width
 
             // Track X-Spacing
-            let spacing_in_candles = current_x_spacing.current / full_candle_width
+            let spacing_in_candles = candleChartRef.current.width.current_X_OffSet / full_candle_width
 
             // Track Index
             let index = Math.floor(mouse_x_loc_with_x_spacing/full_candle_width)
    
            
-            mouse_x_loc = (mouse_x_loc - current_x_spacing.current);
+            mouse_x_loc = (mouse_x_loc - candleChartRef.current.width.current_X_OffSet);
             mouse_x_loc = mouse_x_loc - (candle_width.current / 2);
  
           
@@ -517,7 +478,7 @@ export const Candle_Chart = (props) => {
             let pixelStart = (index * full_candle_width) + (full_candle_width/2)
             pixelStart = pixelStart - 2.5
         
-            let x_rect = current_x_spacing.current + (pixelStart - 75) - candle_width.current;
+            let x_rect = candleChartRef.current.width.current_X_OffSet + (pixelStart - 75) - candle_width.current;
             let y_rect = 0;
             let width_rect = 150;
             let height_rect = 40;
@@ -526,7 +487,7 @@ export const Candle_Chart = (props) => {
                 ctx_date.beginPath();
                 // ctx_date.fillStyle = "teal";
                 ctx_date.fillStyle = "#151c20e0";
-                ctx_date.fillRect( (-pixelStart - current_x_spacing.current)-80, y_rect, width_rect, canvas_date.height);
+                ctx_date.fillRect( (-pixelStart - candleChartRef.current.width.current_X_OffSet)-80, y_rect, width_rect, canvas_date.height);
                 ctx_date.stroke();
                 ctx_date.restore()
             }
@@ -536,29 +497,32 @@ export const Candle_Chart = (props) => {
         const draw_date_text = () => {
      
             let mouse_x_loc = mouseX.current 
-            let mouse_x_loc_with_x_spacing = -(mouse_x_loc + current_x_spacing.current)
+            let mouse_x_loc_with_x_spacing = -(mouse_x_loc + candleChartRef.current.width.current_X_OffSet)
 
 
             // Track Candle Width
             // let full_candle_width = candle_width.current + 5
-            let full_candle_width = chart.current.current_candle_width + 5
+            let full_candle_width = chart.current.current_full_candle_width
 
             // Track X-Spacing
-            let spacing_in_candles = current_x_spacing.current / full_candle_width
+            let spacing_in_candles = candleChartRef.current.width.current_X_OffSet / full_candle_width
 
             // Track Index
             let index = Math.floor(mouse_x_loc_with_x_spacing/full_candle_width)
+            // current_hovered_candle_index.current = index
 
             let pixelStart = (index * full_candle_width) + (full_candle_width/2)
             pixelStart = pixelStart - 2.5
 
             // Get Hovered Candle Date
-            const hoveredCandle = candles.current[index]?.date;
+            const hoveredCandle = candleChartRef.current.candles.candles[index]?.date;
             const date = new Date(hoveredCandle); 
             const options = { weekday: 'short', day: '2-digit', month: 'short' };
             const formattedDate = date.toLocaleDateString('en-GB', options);
             const shortYear = `'${date.getFullYear().toString().slice(-2)}`;
             const finalFormat = `${formattedDate} ${shortYear}`;
+
+            
 
             const metrics = ctx_date.measureText(finalFormat);
             const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
@@ -569,7 +533,7 @@ export const Candle_Chart = (props) => {
             ctx_date.beginPath(); 
             ctx_date.font = '16px Arial'
             ctx_date.fillStyle = "gray";
-            ctx_date.fillText(finalFormat, (-pixelStart - current_x_spacing.current)-60,(canvas_date.height /2) + textHeight/2);
+            ctx_date.fillText(finalFormat, (-pixelStart - candleChartRef.current.width.current_X_OffSet)-60,(canvas_date.height /2) + textHeight/2);
             ctx_date.stroke();
             }
         
@@ -580,12 +544,12 @@ export const Candle_Chart = (props) => {
             let startingX = -(chart.current.current_candle_width / 2);
             
             let candle_index = 0
-            // candles.current = candles.current.slice(0,30)
-            candles.current.forEach(item => {
+            // candleChartRef.current.candles.candles = candleChartRef.current.candles.candles.slice(0,30)
+            candleChartRef.current.candles.candles.forEach(item => {
                 
-                const x = Math.floor(startingX - current_x_spacing.current);
+                const x = Math.floor(startingX - candleChartRef.current.width.current_X_OffSet);
          
-                const date = new Date(candles.current[candle_index]?.date);
+                const date = new Date(candleChartRef.current.candles.candles[candle_index]?.date);
                 
                 const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(-2)}`;
                 const metrics = ctx_date.measureText(formattedDate);
@@ -612,25 +576,52 @@ export const Candle_Chart = (props) => {
         const handleMouseMove = (e) => {
             mouseX.current = e.clientX - canvas.getBoundingClientRect().left;
             mouseY.current = e.clientY - canvas.getBoundingClientRect().top;
-            
+        
+            // Mouse drag handling: update canvas offsets and mid-price while mouse is pressed
             if(mousePressedRef.current){   
               
-                // x
+                // -------------------
+                // Horizontal movement (X)
+                // -------------------
+
+                // Calculate how many pixels the mouse moved horizontally while mouse down
                 let pixels_mouse_moved_x = x_coord_on_mouse_click.current - mouseX.current
-                current_x_spacing.current = prev_x_spacing.current + pixels_mouse_moved_x
-                current_canvas_width.current = prev_canvas_width.current  + current_x_spacing.current
+
+                // Update current canvas horizontal spacing based on previous offset
+                candleChartRef.current.width.current_X_OffSet = candleChartRef.current.width.prev_X_OffSet + pixels_mouse_moved_x
+                
+                // Update canvas width to reflect new horizontal position
+                candleChartRef.current.width.current_canvas_width = candleChartRef.current.width.prev_canvas_width  + candleChartRef.current.width.current_X_OffSet
     
-                // Y
+                // -------------------
+                // Vertical movement (Y)
+                // -------------------
+
+                // Calculate how many pixels the mouse moved vertically while mouse down
                 let pixels_mouse_moved = y_coord_on_mouse_click.current - mouseY.current
-                current_y_spacing.current = prev_y_spacing.current + pixels_mouse_moved
-                current_canvas_height.current = prev_canvas_height.current - pixels_mouse_moved
+
+                // Add canvas vertical spacing to previous value
+                candleChartRef.current.height.current_Y_OffSet = candleChartRef.current.height.prev_Y_OffSet + pixels_mouse_moved
+
+                // Update canvas height accordingly
+                candleChartRef.current.height.currentBaselineY = candleChartRef.current.height.previousBaselineY - pixels_mouse_moved
+                
+
+                // NEW ==================
+                // Update chartBaselineY
+                candleChartRef.current.height.currentBaselineY = 
+                    candleChartRef.current.height.previousBaselineY - pixels_mouse_moved
+                
+       
+
+
 
                 // Mid
-                let total_price_height = current_pixels_per_price_unit.current + current_shrink_expand.current
+                let total_price_height = candleChartRef.current.price.current_pixels_per_price_unit + current_shrink_expand.current
                 let prices_moved = pixels_mouse_moved / total_price_height
-                let mid = prev_mid_price.current - prices_moved
-                current_mid_price.current = mid
-                static_mid.current = mid
+                let mid = candleChartRef.current.price.prev_mid_price - prices_moved
+                candleChartRef.current.price.current_mid_price = mid
+                candleChartRef.current.price.static_mid = mid
         
             
             }   
@@ -654,44 +645,44 @@ export const Candle_Chart = (props) => {
         };
         const candle_height_zoom = (e) => {
 
-            let threshold = Math.floor(chart.current.starting_price_unit_pixel_size * 0.5)
+            let threshold = Math.floor(candleChartRef.current.price.starting_price_unit_pixel_size  * 0.5)
 
-            let expand_threshold = Math.floor(chart.current.starting_price_unit_pixel_size * 1.5)
+            let expand_threshold = Math.floor(candleChartRef.current.price.starting_price_unit_pixel_size  * 1.5)
         
             const zoomOut = () => {
 
-                shrink_expand_height.current += current_mid_price.current
-                zoom_level.current += 1;
-                current_pixels_per_price_unit.current -= 1;
-                const added_height = current_mid_price.current * -1;
-                current_canvas_height.current += added_height;
-                prev_canvas_height.current = current_canvas_height.current;
+                candleChartRef.current.zoom.shrink_expand_height += candleChartRef.current.price.current_mid_price
+                candleChartRef.current.zoom.current += 1;
+                candleChartRef.current.price.current_pixels_per_price_unit -= 1;
+                const added_height = candleChartRef.current.price.current_mid_price * -1;
+                candleChartRef.current.height.currentBaselineY += added_height;
+                candleChartRef.current.height.previousBaselineY = candleChartRef.current.height.currentBaselineY;
 
-                chart.current.current_price_unit_pixel_size = Math.floor(chart.current.current_price_unit_pixel_size -1)
+                candleChartRef.current.price.current_price_unit_pixel_size = Math.floor(candleChartRef.current.price.current_price_unit_pixel_size -1)
                 
 
-                if (chart.current.current_price_unit_pixel_size === threshold) {
+                if (candleChartRef.current.price.current_price_unit_pixel_size === threshold) {
 
                     chart.current.grid_size_count+=1
                     
                     // Increase Unit Size
-                    current_pixels_per_price_unit.current *= 2;
-                    prev_pixels_per_price_unit.current *= 2;
+                    candleChartRef.current.price.current_pixels_per_price_unit *= 2;
+                    candleChartRef.current.price.prev_pixels_per_price_unit *= 2;
                     
                     // Increase Displayed Numbers
-                    price_counter.current *= 2;
+                    candleChartRef.current.price_counter *= 2;
                     
                     // Adjust Height
-                    let current_height = current_canvas_height.current / current_pixels_per_price_unit.current;
-                    let total_height = starting_canvas_height.current / current_pixels_per_price_unit.current;
+                    let current_height = candleChartRef.current.height.currentBaselineY / candleChartRef.current.price.current_pixels_per_price_unit;
+                    let total_height = candleChartRef.current.height.startingBaselineY / candleChartRef.current.price.current_pixels_per_price_unit;
                     
                     // Track Mid
                     let current_mid = (total_height / 2) - (total_height - current_height);
-                    current_mid_price.current = current_mid;
-                    prev_mid_price.current = current_mid;
+                    candleChartRef.current.price.current_mid_price = current_mid;
+                    candleChartRef.current.price.prev_mid_price = current_mid;
 
-                    unit_amount.current *= 2
-                    chart.current.current_price_unit_pixel_size = current_pixels_per_price_unit.current
+                    candleChartRef.current.unit_amount *= 2
+                    candleChartRef.current.price.current_price_unit_pixel_size = candleChartRef.current.price.current_pixels_per_price_unit
 
                     // break;
                 }
@@ -699,43 +690,43 @@ export const Candle_Chart = (props) => {
                 const add_shrink_expand_to_candle_top = (obj) => {
 
 
-                    let res = (obj.close - obj.open) / unit_amount.current
-                    res = res * current_pixels_per_price_unit.current
+                    let res = (obj.close - obj.open) / candleChartRef.current.unit_amount
+                    res = res * candleChartRef.current.price.current_pixels_per_price_unit
                     return Math.trunc(-res);
                 }
                 const add_shrink_expand_to_candle = (price, mid_price, height_counter, static_open, obj) => {
 
-                    let res = price / unit_amount.current
-                    res = res * current_pixels_per_price_unit.current
-                    res = res - starting_canvas_height.current
-                    res = res + shrink_expand_height.current
+                    let res = price / candleChartRef.current.unit_amount
+                    res = res * candleChartRef.current.price.current_pixels_per_price_unit
+                    res = res - candleChartRef.current.height.startingBaselineY
+                    res = res + candleChartRef.current.zoom.shrink_expand_height
 
                     return Math.trunc(-res);
                 }
-                // candles.current = candles.current.slice(0,1)
-                candles.current = candles.current.map((obj) => {
+                // candleChartRef.current.candles.candles = candleChartRef.current.candles.candles.slice(0,1)
+                candleChartRef.current.candles.candles = candleChartRef.current.candles.candles.map((obj) => {
                
                
                     return {
                         ...obj,
-                        current_high: add_shrink_expand_to_candle(obj.high,current_mid_price.current,1,obj.prev_high),
+                        current_high: add_shrink_expand_to_candle(obj.high,candleChartRef.current.price.current_mid_price,1,obj.prev_high),
                         current_height: Math.abs(obj.current_height) > 1 ? add_shrink_expand_to_candle_top(obj) : 1,
-                        current_bottom: add_shrink_expand_to_candle(obj.open,current_mid_price.current,1,obj.prev_bottom, obj),
-                        current_low: add_shrink_expand_to_candle(obj.low,current_mid_price.current,1,obj.prev_low)
+                        current_bottom: add_shrink_expand_to_candle(obj.open,candleChartRef.current.price.current_mid_price,1,obj.prev_bottom, obj),
+                        current_low: add_shrink_expand_to_candle(obj.low,candleChartRef.current.price.current_mid_price,1,obj.prev_low)
                     };
                 });
                 
             };
             const zoomIn = () => {
                 
-                shrink_expand_height.current -= current_mid_price.current
-                zoom_level.current -= 1;
-                current_pixels_per_price_unit.current += 1;
-                const added_height = current_mid_price.current * -1;
-                current_canvas_height.current -= added_height;
-                prev_canvas_height.current = current_canvas_height.current;
+                candleChartRef.current.zoom.shrink_expand_height -= candleChartRef.current.price.current_mid_price
+                candleChartRef.current.zoom.current -= 1;
+                candleChartRef.current.price.current_pixels_per_price_unit += 1;
+                const added_height = candleChartRef.current.price.current_mid_price * -1;
+                candleChartRef.current.height.currentBaselineY -= added_height;
+                candleChartRef.current.height.previousBaselineY = candleChartRef.current.height.currentBaselineY;
 
-                chart.current.current_price_unit_pixel_size = Math.floor(chart.current.current_price_unit_pixel_size +1)
+                candleChartRef.current.price.current_price_unit_pixel_size = Math.floor(candleChartRef.current.price.current_price_unit_pixel_size +1)
               
                 // const zoomLevels = [
                 //     { threshold: 80, multiplier: 5 , pixel_size_reducer: 1},
@@ -750,44 +741,44 @@ export const Candle_Chart = (props) => {
                 //     { threshold: 1550, multiplier: 5 , pixel_size_reducer: 10000},
                 // ];
                 // for (const level of zoomLevels) {
-                    if (chart.current.current_price_unit_pixel_size === expand_threshold) {
+                    if (candleChartRef.current.price.current_price_unit_pixel_size === expand_threshold) {
                     
                         // Descrease Unit Pixel Size
-                        current_pixels_per_price_unit.current /= 2;
-                        prev_pixels_per_price_unit.current /= 2;
+                        candleChartRef.current.price.current_pixels_per_price_unit /= 2;
+                        candleChartRef.current.price.prev_pixels_per_price_unit /= 2;
 
                         // Descrease Displayed Numbers
-                        price_counter.current /= 2;
+                        candleChartRef.current.price_counter /= 2;
             
-                        let current_height = current_canvas_height.current / current_pixels_per_price_unit.current;
-                        let total_height = starting_canvas_height.current / current_pixels_per_price_unit.current;
+                        let current_height = candleChartRef.current.height.currentBaselineY / candleChartRef.current.price.current_pixels_per_price_unit;
+                        let total_height = candleChartRef.current.height.startingBaselineY / candleChartRef.current.price.current_pixels_per_price_unit;
                      
                         // Track Mid
                         let current_mid = (total_height / 2) - (total_height - current_height);
-                        current_mid_price.current = current_mid;
-                        prev_mid_price.current = current_mid;
+                        candleChartRef.current.price.current_mid_price = current_mid;
+                        candleChartRef.current.price.prev_mid_price = current_mid;
          
-                        unit_amount.current /= 2
-                        chart.current.current_price_unit_pixel_size = current_pixels_per_price_unit.current
+                        candleChartRef.current.unit_amount /= 2
+                        candleChartRef.current.price.current_price_unit_pixel_size = candleChartRef.current.price.current_pixels_per_price_unit
 
                    
                     }
                 
                 const add_shrink_expand_to_candle_top = (obj) => {
-                    let res = (obj.close - obj.open) / unit_amount.current
-                    res = res * current_pixels_per_price_unit.current
+                    let res = (obj.close - obj.open) / candleChartRef.current.unit_amount
+                    res = res * candleChartRef.current.price.current_pixels_per_price_unit
                     return Math.trunc(-res);
                              
                 }
                 const add_shrink_expand_to_candle = (price) => {
-                    let res = price / unit_amount.current
-                    res = res * current_pixels_per_price_unit.current
-                    res = res - starting_canvas_height.current
-                    res = res + shrink_expand_height.current
+                    let res = price / candleChartRef.current.unit_amount
+                    res = res * candleChartRef.current.price.current_pixels_per_price_unit
+                    res = res - candleChartRef.current.height.startingBaselineY
+                    res = res + candleChartRef.current.zoom.shrink_expand_height
 
                     return Math.trunc(-res); 
                 }
-                candles.current = candles.current.map((obj) => {
+                candleChartRef.current.candles.candles = candleChartRef.current.candles.candles.map((obj) => {
 
                     return {
                         ...obj,
@@ -808,21 +799,26 @@ export const Candle_Chart = (props) => {
    
         };
         const candle_width_zoom = (event) => {
-            
-   
+
             const zoomIn = () => {       
+                
+                
                 // Increase Grid Width
-                chart.current.x_grid_width += chart.current.x_grid_increaser
-                // Increase Space Between Candles
-                if(chart.current.current_pixels_between_candles < 5){
-                    pixels_between_candles.current +=1
-                    chart.current.current_pixels_between_candles +=1
-                }
+                chart.current.x_grid_width += .75 * chart.current.x_grid_increaser
+                
                 // Increase Candle Width
-                if(chart.current.current_pixels_between_candles >= 5){
-                   chart.current.current_candle_width += 1
-                   chart.current.current_full_candle_width = chart.current.current_candle_width + chart.current.current_pixels_between_candles
-                }
+                chart.current.current_candle_width += .50
+                chart.current.current_pixels_between_candles += .25
+                
+                chart.current.current_full_candle_width = chart.current.current_candle_width + chart.current.current_pixels_between_candles
+
+                let multiplier = 2 * current_hovered_candle_index.current - 1
+                let offset = (0.25 + 0.125) * multiplier
+
+                // X-Spacing
+                candleChartRef.current.width.current_X_OffSet -= offset
+                candleChartRef.current.width.prev_X_OffSet -= offset
+          
                 // Add More Grids
                 const zoomLevels = [
                     { threshold: 5, increaser: 20},
@@ -841,27 +837,31 @@ export const Candle_Chart = (props) => {
               
             }
             const zoomOut = () => {
-          
+                
                 // Decrease Grid Width
-                chart.current.x_grid_width -= chart.current.x_grid_increaser
-                // Decrease Space Between Pixels
-                if(chart.current.current_candle_width===0){
-                    if(chart.current.current_full_candle_width>1){
-                        console.log(chart.current.current_full_candle_width)
-                        pixels_between_candles.current -=1
-                        chart.current.current_pixels_between_candles -=1
-                        chart.current.current_full_candle_width = chart.current.current_candle_width + chart.current.current_pixels_between_candles
-                        
-                    }         
-                }
+                
+                if(chart.current.current_candle_width>0.5){
+
+               
+                    chart.current.x_grid_width -= .75 * chart.current.x_grid_increaser
+              
+                
                 // Decrease Candle Width
-                if(chart.current.current_candle_width > 0){
-                    chart.current.current_candle_width -= 1
+                // if(chart.current.current_candle_width > .50){
+                    chart.current.current_candle_width -= .50
+                    chart.current.current_pixels_between_candles -= .25
                     chart.current.current_full_candle_width = chart.current.current_candle_width + chart.current.current_pixels_between_candles
-                } 
+
+                    let multiplier = 2 * current_hovered_candle_index.current - 1
+                    let offset = (0.25 + 0.125) * multiplier
+                    // X-Spacing
+                    candleChartRef.current.width.current_X_OffSet += offset
+                    candleChartRef.current.width.prev_X_OffSet += offset
+                // } 
 
                 // Reduce Grids
                 const zoomLevels = [
+                     { threshold: 1.75, increaser: 320},
                     { threshold: 5, increaser: 40},
                     { threshold: 10, increaser: 20},
                     { threshold: 25, increaser: 10},
@@ -875,6 +875,9 @@ export const Candle_Chart = (props) => {
                         
                     }
                 }
+ }
+
+
                 
             }
 
@@ -883,6 +886,9 @@ export const Candle_Chart = (props) => {
             animationFrameId = null;
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             animationFrameId = requestAnimationFrame(draw); 
+
+
+            
         }
         const draw = () => {
 
@@ -891,109 +897,388 @@ export const Candle_Chart = (props) => {
 
             ctx_price.clearRect(0, 0, cp.width, cp.height);
             
+            const draw_X_letter = () => {
 
-            // ctx.beginPath();
-            // ctx.strokeStyle = 'yellow';
-            // ctx.lineWidth = 1;
-            // ctx.moveTo(0, starting_canvas_height.current/2);
-            // ctx.lineTo(canvas.width, starting_canvas_height.current/2);
-            // ctx.stroke();
-            
-            
-            const  draw_start_AB = () => {
-                
-                ctx.save()
+                ctx.save();
+
                 // --- A Coordinates ---
-                let a_y_loc = (abcd.a_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                a_y_loc = -(a_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let a_y_loc = (abcd.x_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                a_y_loc = -(a_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
+
+                let a_x_loc = -chart.current.current_full_candle_width * abcd.x_date;
+                a_x_loc -= candleChartRef.current.width.current_X_OffSet;
+                a_x_loc += chart.current.current_full_candle_width / 2;
+
+                // Set font and measure text
+                const fontSize = 14;
+                ctx.font = `${fontSize}px Arial`;
+                const text = "X";
+                const textMetrics = ctx.measureText(text);
+                const padding = 4;
+
+                const textWidth = textMetrics.width;
+                const textHeight = fontSize; // Approximate height since canvas doesn't give this directly
+
+                // Draw background box
+                ctx.fillStyle = "orange";
+                ctx.fillRect(
+                    a_x_loc - padding,
+                    a_y_loc - textHeight - padding,
+                    textWidth + padding * 2,
+                    textHeight + padding * 2
+                );
+
+                // Draw border (optional)
+                ctx.strokeStyle = "black";
+                ctx.strokeRect(
+                    a_x_loc - padding,
+                    a_y_loc - textHeight - padding,
+                    textWidth + padding * 2,
+                    textHeight + padding * 2
+                );
+
+                // Draw the letter A
+                ctx.fillStyle = "black";
+                ctx.fillText(text, a_x_loc, a_y_loc);
+
+                ctx.restore();
+
+            }
+            const draw_A_letter = () => {
+
+                ctx.save();
+
+                // --- A Coordinates ---
+                let a_y_loc = (abcd.a_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                a_y_loc = -(a_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
                 let a_x_loc = -chart.current.current_full_candle_width * abcd.a;
-                a_x_loc -= current_x_spacing.current;
+                a_x_loc -= candleChartRef.current.width.current_X_OffSet;
+                a_x_loc += chart.current.current_full_candle_width / 2;
+
+                // Set font and measure text
+                const fontSize = 14;
+                ctx.font = `${fontSize}px Arial`;
+                const text = "A";
+                const textMetrics = ctx.measureText(text);
+                const padding = 4;
+
+                const textWidth = textMetrics.width;
+                const textHeight = fontSize; // Approximate height since canvas doesn't give this directly
+
+                // Draw background box
+                ctx.fillStyle = "orange";
+                ctx.fillRect(
+                    a_x_loc - padding,
+                    a_y_loc - textHeight - padding,
+                    textWidth + padding * 2,
+                    textHeight + padding * 2
+                );
+
+                // Draw border (optional)
+                ctx.strokeStyle = "black";
+                ctx.strokeRect(
+                    a_x_loc - padding,
+                    a_y_loc - textHeight - padding,
+                    textWidth + padding * 2,
+                    textHeight + padding * 2
+                );
+
+                // Draw the letter A
+                ctx.fillStyle = "black";
+                ctx.fillText(text, a_x_loc, a_y_loc);
+
+                ctx.restore();
+
+            }
+            const draw_B_letter = () => {
+
+                ctx.save();
+
+                // --- A Coordinates ---
+                let a_y_loc = (abcd.b_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                a_y_loc = -(a_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
+
+                let a_x_loc = -chart.current.current_full_candle_width * abcd.b;
+                a_x_loc -= candleChartRef.current.width.current_X_OffSet;
+                a_x_loc += chart.current.current_full_candle_width / 2;
+
+                // Set font and measure text
+                const fontSize = 14;
+                ctx.font = `${fontSize}px Arial`;
+                const text = "B";
+                const textMetrics = ctx.measureText(text);
+                const padding = 4;
+
+                const textWidth = textMetrics.width;
+                const textHeight = fontSize; // Approximate height since canvas doesn't give this directly
+
+                // Draw background box
+                ctx.fillStyle = "orange";
+                ctx.fillRect(
+                    a_x_loc - padding,
+                    a_y_loc - textHeight - padding,
+                    textWidth + padding * 2,
+                    textHeight + padding * 2
+                );
+
+                // Draw border (optional)
+                ctx.strokeStyle = "black";
+                ctx.strokeRect(
+                    a_x_loc - padding,
+                    a_y_loc - textHeight - padding,
+                    textWidth + padding * 2,
+                    textHeight + padding * 2
+                );
+
+                // Draw the letter A
+                ctx.fillStyle = "black";
+                ctx.fillText(text, a_x_loc, a_y_loc);
+
+                ctx.restore();
+
+            }
+            const draw_C_letter = () => {
+
+                ctx.save();
+
+                // --- A Coordinates ---
+                let a_y_loc = (abcd.c_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                a_y_loc = -(a_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
+
+                let a_x_loc = -chart.current.current_full_candle_width * abcd.c;
+                a_x_loc -= candleChartRef.current.width.current_X_OffSet;
+                a_x_loc += chart.current.current_full_candle_width / 2;
+
+                // Set font and measure text
+                const fontSize = 14;
+                ctx.font = `${fontSize}px Arial`;
+                const text = "C";
+                const textMetrics = ctx.measureText(text);
+                const padding = 4;
+
+                const textWidth = textMetrics.width;
+                const textHeight = fontSize; // Approximate height since canvas doesn't give this directly
+
+                // Draw background box
+                ctx.fillStyle = "orange";
+                ctx.fillRect(
+                    a_x_loc - padding,
+                    a_y_loc - textHeight - padding,
+                    textWidth + padding * 2,
+                    textHeight + padding * 2
+                );
+
+                // Draw border (optional)
+                ctx.strokeStyle = "black";
+                ctx.strokeRect(
+                    a_x_loc - padding,
+                    a_y_loc - textHeight - padding,
+                    textWidth + padding * 2,
+                    textHeight + padding * 2
+                );
+
+                // Draw the letter A
+                ctx.fillStyle = "black";
+                ctx.fillText(text, a_x_loc, a_y_loc);
+
+                ctx.restore();
+
+            }
+            const draw_D_letter = () => {
+
+                ctx.save();
+
+                // --- A Coordinates ---
+                let a_y_loc = (abcd.d_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                a_y_loc = -(a_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
+
+                let a_x_loc = -chart.current.current_full_candle_width * abcd.d;
+                a_x_loc -= candleChartRef.current.width.current_X_OffSet;
+                a_x_loc += chart.current.current_full_candle_width / 2;
+
+                // Set font and measure text
+                const fontSize = 14;
+                ctx.font = `${fontSize}px Arial`;
+                const text = "D";
+                const textMetrics = ctx.measureText(text);
+                const padding = 4;
+
+                const textWidth = textMetrics.width;
+                const textHeight = fontSize; // Approximate height since canvas doesn't give this directly
+
+                // Draw background box
+                ctx.fillStyle = "orange";
+                ctx.fillRect(
+                    a_x_loc - padding,
+                    a_y_loc - textHeight - padding,
+                    textWidth + padding * 2,
+                    textHeight + padding * 2
+                );
+
+                // Draw border (optional)
+                ctx.strokeStyle = "black";
+                ctx.strokeRect(
+                    a_x_loc - padding,
+                    a_y_loc - textHeight - padding,
+                    textWidth + padding * 2,
+                    textHeight + padding * 2
+                );
+
+                // Draw the letter A
+                ctx.fillStyle = "black";
+                ctx.fillText(text, a_x_loc, a_y_loc);
+
+                ctx.restore();
+
+            }
+            const draw_start_AB = () => {
+                
+                ctx.save()
+                // --- X Coordinates ---
+                let pivot_x_y_loc = (abcd.x_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                pivot_x_y_loc = -(pivot_x_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
+
+                let pivot_x_x_loc = -chart.current.current_full_candle_width * abcd.x_date;
+                pivot_x_x_loc -= candleChartRef.current.width.current_X_OffSet;
+                pivot_x_x_loc += chart.current.current_full_candle_width / 2;
+                // --- A Coordinates ---
+                let a_y_loc = (abcd.a_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                a_y_loc = -(a_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
+
+                let a_x_loc = -chart.current.current_full_candle_width * abcd.a;
+                a_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 a_x_loc += chart.current.current_full_candle_width / 2;
 
                 // --- B Coordinates ---
-                let b_y_loc = (abcd.b_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                b_y_loc = -(b_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let b_y_loc = (abcd.b_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                b_y_loc = -(b_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
                 let b_x_loc = -chart.current.current_full_candle_width * abcd.b;
-                b_x_loc -= current_x_spacing.current;
+                b_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 b_x_loc += chart.current.current_full_candle_width / 2;
 
                 // --- C Coordinates ---
-                let c_y_loc = (abcd.c_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                c_y_loc = -(c_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let c_y_loc = (abcd.c_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                c_y_loc = -(c_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
                 let c_x_loc = -chart.current.current_full_candle_width * abcd.c;
-                c_x_loc -= current_x_spacing.current;
+                c_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 c_x_loc += chart.current.current_full_candle_width / 2;
 
                 // --- D Coordinates ---
-                let d_y_loc = (abcd.d_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                d_y_loc = -(d_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let d_y_loc = (abcd.d_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                d_y_loc = -(d_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
                 let d_x_loc = -chart.current.current_full_candle_width * abcd.d;
-                d_x_loc -= current_x_spacing.current;
+                d_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 d_x_loc += chart.current.current_full_candle_width / 2;
+
+                // --- Exit Coordinates ---
+                let exit_y_loc = (abcd.exit_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                exit_y_loc = -(exit_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
+
+                let exit_x_loc = -chart.current.current_full_candle_width * abcd.exit_date;
+                exit_x_loc -= candleChartRef.current.width.current_X_OffSet;
+                exit_x_loc += chart.current.current_full_candle_width / 2;
 
                 // --- Draw Lines ---
                 ctx.beginPath();
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 7;
+    
 
                 // AB
-                ctx.moveTo(a_x_loc, a_y_loc);
+                ctx.moveTo(pivot_x_x_loc, pivot_x_y_loc);
+                ctx.lineTo(a_x_loc, a_y_loc);
                 ctx.lineTo(b_x_loc, b_y_loc);
                 // BC
                 ctx.lineTo(c_x_loc, c_y_loc); 
                 // CD
                 ctx.lineTo(d_x_loc, d_y_loc); 
-
-                ctx.closePath(); // Closes the path back to point A
-                // ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'; // white with transparency
-                // ctx.fill();
-
+         
+       
                 // --- Optional stroke on top ---
                 ctx.strokeStyle = 'white';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 5;
 
                 ctx.stroke();
                 ctx.restore()
 
-            }
+                ctx.save();
 
-            const  draw_retracement = () => {
+                // --- Common Values ---
+                const arrowLength = 20;
+                const arrowAngle = Math.PI / 6;
+
+                // --- Calculate angle of the line ---
+                const angle = Math.atan2(exit_y_loc - d_y_loc, exit_x_loc - d_x_loc);
+
+                // --- Calculate shortened end point for line (before arrow) ---
+                const shortened_x = exit_x_loc - arrowLength * Math.cos(angle);
+                const shortened_y = exit_y_loc - arrowLength * Math.sin(angle);
+
+                // --- Draw line (stops before arrowhead) ---
+                ctx.beginPath();
+                ctx.moveTo(d_x_loc, d_y_loc);
+                ctx.lineTo(shortened_x, shortened_y);
+                ctx.strokeStyle = abcd.result === 'Win' ? 'teal' : 'darkred';
+                ctx.lineWidth = 10;
+                ctx.shadowColor = abcd.result === 'Win' ? 'teal' : 'red'; // match line color
+                ctx.shadowBlur = 25
+                ctx.stroke();
+
+                // --- Draw Arrowhead ---
+                ctx.beginPath();
+                ctx.moveTo(exit_x_loc, exit_y_loc);
+                ctx.lineTo(
+                exit_x_loc - arrowLength * Math.cos(angle - arrowAngle),
+                exit_y_loc - arrowLength * Math.sin(angle - arrowAngle)
+                );
+                ctx.lineTo(
+                exit_x_loc - arrowLength * Math.cos(angle + arrowAngle),
+                exit_y_loc - arrowLength * Math.sin(angle + arrowAngle)
+                );
+                ctx.lineTo(exit_x_loc, exit_y_loc); // Back to tip
+                ctx.closePath();
+
+                ctx.fillStyle = 'white'; // visible arrowhead color
+                ctx.fill();
+
+                ctx.restore();
+
+            }
+            const draw_retracement = () => {
                 
                 ctx.save()
                 // --- A Coordinates ---
-                let a_y_loc = (abcd.a_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                a_y_loc = -(a_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let a_y_loc = (abcd.a_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                a_y_loc = -(a_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
                 let a_x_loc = -chart.current.current_full_candle_width * abcd.a;
-                a_x_loc -= current_x_spacing.current;
+                a_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 a_x_loc += chart.current.current_full_candle_width / 2;
 
                 // --- B Coordinates ---
-                let b_y_loc = (abcd.b_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                b_y_loc = -(b_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let b_y_loc = (abcd.b_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                b_y_loc = -(b_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
                 let b_x_loc = -chart.current.current_full_candle_width * abcd.b;
-                b_x_loc -= current_x_spacing.current;
+                b_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 b_x_loc += chart.current.current_full_candle_width / 2;
 
                 // --- C Coordinates ---
-                let c_y_loc = (abcd.c_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                c_y_loc = -(c_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let c_y_loc = (abcd.c_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                c_y_loc = -(c_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
                 let c_x_loc = -chart.current.current_full_candle_width * abcd.c;
-                c_x_loc -= current_x_spacing.current;
+                c_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 c_x_loc += chart.current.current_full_candle_width / 2;
 
                 // --- D Coordinates ---
-                let d_y_loc = (abcd.d_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                d_y_loc = -(d_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let d_y_loc = (abcd.d_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                d_y_loc = -(d_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
                 let d_x_loc = -chart.current.current_full_candle_width * abcd.d;
-                d_x_loc -= current_x_spacing.current;
+                d_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 d_x_loc += chart.current.current_full_candle_width / 2;
 
                 // --- Draw Lines ---
@@ -1006,12 +1291,9 @@ export const Candle_Chart = (props) => {
                 ctx.moveTo(a_x_loc, a_y_loc);
                 ctx.lineTo(c_x_loc, c_y_loc);
 
-                ctx.moveTo(b_x_loc, b_y_loc);
-                ctx.lineTo(d_x_loc, d_y_loc);
-                // // BC
-                ctx.closePath(); // Closes the path back to point A
-                // ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'; // white with transparency
-                // ctx.fill();
+                // ctx.moveTo(b_x_loc, b_y_loc);
+                // ctx.lineTo(d_x_loc, d_y_loc);
+       
 
                 // --- Optional stroke on top ---
                 ctx.strokeStyle = 'white';
@@ -1021,68 +1303,121 @@ export const Candle_Chart = (props) => {
                 ctx.restore()
 
             }
+            const draw_price_levels = () => {
+                            ctx.save();
 
-            const  draw_retracement_days = () => {
-                
+                            // Calculate all y positions
+                            const y_stop_loss = -( (abcd.stop_loss / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit - candleChartRef.current.height.startingBaselineY ) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
+                            const y_take_profit = -( (abcd.take_profit / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit - candleChartRef.current.height.startingBaselineY ) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
+                            const y_entered_price = -( (abcd.entered_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit - candleChartRef.current.height.startingBaselineY ) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
+
+                            // Calculate horizontal start and end positions
+                            let x_start = -chart.current.current_full_candle_width * abcd.d;
+                            x_start -= candleChartRef.current.width.current_X_OffSet;
+                            x_start += chart.current.current_full_candle_width / 2;
+
+                            let x_end = -chart.current.current_full_candle_width * abcd.exit_date;
+                            x_end -= candleChartRef.current.width.current_X_OffSet;
+                            x_end += chart.current.current_full_candle_width / 2;
+
+                            // Draw stop loss line
+                            ctx.beginPath();
+                            ctx.strokeStyle = '#ef5350';
+                            ctx.lineWidth = 3;
+                            ctx.moveTo(x_start, y_stop_loss);
+                            ctx.lineTo(x_end, y_stop_loss);
+                            ctx.stroke();
+
+                            // Draw take profit line
+                            ctx.beginPath();
+                            ctx.strokeStyle = '#26a69a';
+                            ctx.lineWidth = 3;
+                            ctx.moveTo(x_start, y_take_profit);
+                            ctx.lineTo(x_end, y_take_profit);
+                            ctx.stroke();
+
+                            // Draw entered price line
+                            ctx.beginPath();
+                            ctx.strokeStyle = 'white';
+                            ctx.lineWidth = 3;
+                            ctx.moveTo(x_start, y_entered_price);
+                            ctx.lineTo(x_end, y_entered_price);
+                            ctx.stroke();
+
+                            // Fill area above entered price line with teal (take profit zone)
+                            let topFillY = y_take_profit;
+                            let heightTop = y_entered_price - y_take_profit;
+                            if (heightTop > 0) {  // sanity check so height is positive
+                                ctx.fillStyle = 'rgba(38, 166, 154, 0.2)';  // semi-transparent teal
+                                ctx.fillRect(x_start, topFillY, x_end - x_start, heightTop);
+                            }
+
+                            // Fill area below entered price line with red (stop loss zone)
+                            let bottomFillY = y_entered_price;
+                            let heightBottom = y_stop_loss - y_entered_price;
+                            if (heightBottom > 0) {
+                                ctx.fillStyle = 'rgba(239, 83, 80, 0.2)';  // semi-transparent red
+                                ctx.fillRect(x_start, bottomFillY, x_end - x_start, heightBottom);
+                            }
+
+                            ctx.restore();
+            }
+            const draw_ab_price = () => {
+
                 ctx.save()
-                // --- A Coordinates ---
-                let a_y_loc = (abcd.a_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                a_y_loc = -(a_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let a_y_loc = (abcd.a_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                a_y_loc = -(a_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
                 let a_x_loc = -chart.current.current_full_candle_width * abcd.a;
-                a_x_loc -= current_x_spacing.current;
+                a_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 a_x_loc += chart.current.current_full_candle_width / 2;
 
-                // --- B Coordinates ---
-                let b_y_loc = (abcd.b_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                b_y_loc = -(b_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let b_y_loc = (abcd.b_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                b_y_loc = -(b_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
-                let b_x_loc = -chart.current.current_full_candle_width * abcd.c;
-                b_x_loc -= current_x_spacing.current;
+                let b_x_loc = -chart.current.current_full_candle_width * abcd.b;
+                b_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 b_x_loc += chart.current.current_full_candle_width / 2;
 
-                // --- C Coordinates ---
-                let c_y_loc = (abcd.c_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                c_y_loc = -(c_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let c_y_loc = (abcd.c_price / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                c_y_loc = -(c_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
-                let c_x_loc = -chart.current.current_full_candle_width * abcd.b;
-                c_x_loc -= current_x_spacing.current;
+                let c_x_loc = -chart.current.current_full_candle_width * abcd.c;
+                c_x_loc -= candleChartRef.current.width.current_X_OffSet;
                 c_x_loc += chart.current.current_full_candle_width / 2;
 
-                // --- D Coordinates ---
-                let d_y_loc = (abcd.d_price / unit_amount.current) * current_pixels_per_price_unit.current;
-                d_y_loc = -(d_y_loc - starting_canvas_height.current) - shrink_expand_height.current - current_y_spacing.current;
+                let d_y_loc = ((abcd.c_price-abcd.ab_price_length) / candleChartRef.current.unit_amount) * candleChartRef.current.price.current_pixels_per_price_unit;
+                d_y_loc = -(d_y_loc - candleChartRef.current.height.startingBaselineY) - candleChartRef.current.zoom.shrink_expand_height - candleChartRef.current.height.current_Y_OffSet;
 
-                let d_x_loc = -chart.current.current_full_candle_width * abcd.d;
-                d_x_loc -= current_x_spacing.current;
-                d_x_loc += chart.current.current_full_candle_width / 2;
-
-                // --- Draw Lines ---
                 ctx.beginPath();
-                ctx.strokeStyle = 'blue';
-                ctx.lineWidth = 3
-                ctx.setLineDash([5, 5]); 
+    
 
                 // AB
                 ctx.moveTo(a_x_loc, a_y_loc);
-                ctx.lineTo(c_x_loc, a_y_loc);
-                ctx.lineTo(c_x_loc, c_y_loc);
+                ctx.lineTo(a_x_loc, b_y_loc);
 
-                ctx.moveTo(b_x_loc, b_y_loc);
-                ctx.lineTo(b_x_loc, d_y_loc);
-                ctx.lineTo(d_x_loc, d_y_loc);
+                ctx.moveTo(c_x_loc, c_y_loc);
+                ctx.lineTo(c_x_loc, d_y_loc);
+            
+
+       
+                // --- Optional stroke on top ---
+              
+                ctx.lineWidth = 5;
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 3
+                ctx.setLineDash([5, 5]); 
 
                 ctx.stroke();
                 ctx.restore()
 
+
             }
 
-
-   
-
+          
 
             drawGrid();
-            // draw_x_grid()
+            draw_x_grid()
             
             drawCandles();
             drawWicks();
@@ -1097,12 +1432,22 @@ export const Candle_Chart = (props) => {
             
             // draw_x_grid_date();
             // draw_X_date_tag()
-            // draw_date_text()
+            draw_date_text()
 
             draw_start_AB()
       
             draw_retracement()
             // draw_retracement_days()
+            // draw_stop_lost()
+            // draw_take_profit()
+            // draw_entered_price()
+            // draw_price_levels()
+            // draw_X_letter()
+            // draw_A_letter()
+            // draw_B_letter()
+            // draw_C_letter()
+            // draw_D_letter()
+            // draw_ab_price()
     
             
             animationFrameId = null;
@@ -1140,57 +1485,85 @@ export const Candle_Chart = (props) => {
         };
     }, [selected_candles, abcd]);
 
+    // Format Pattern
     useEffect(()=>{
-        
-    
         if(selected_abcd){
 
-            
-            // console.log(selected_abcd)
-            // console.log('======================')
-            // console.log(selected_abcd)
-            // console.log('A:',selected_abcd['pattern_A_pivot_date'], selected_abcd['pivot_A_price'])
-            // console.log('B:',selected_abcd['pattern_B_pivot_date'], selected_abcd['pivot_B_price'])
-            // console.log('C:',selected_abcd['pattern_C_pivot_date'], selected_abcd['pivot_C_price'])
-            // console.log('D:',selected_abcd['pattern_d_created_date'], selected_abcd['pivot_D_price'])
-            // console.log('Enter:',selected_abcd['trade_entered_date'], selected_abcd['trade_entered_price'])
-            // console.log('Exit:',selected_abcd['trade_exited_date'], selected_abcd['trade_exited_price'])
-
-            const get_index = (candle_date) => {
-                const index = selected_candles.findIndex(obj => {
-                    const date = new Date(obj.date);
-                    const formatted = date.toISOString().split("T")[0]; // "YYYY-MM-DD"
-                    return formatted === candle_date;
-                });
-                return index
+            const get_formatted_date = (candle) => {
+                const date = new Date(candle.date);
+                return date.toISOString().split("T")[0];
             }
             
             set_abcd(prev=> ({
                 ...prev,
-                a: get_index(selected_abcd['pattern_A_pivot_date']),
-                b: get_index(selected_abcd['pattern_B_pivot_date']),
-                c: get_index(selected_abcd['pattern_C_pivot_date']),
-                d: get_index(selected_abcd['trade_entered_date']),
-
+                a: get_formatted_date(selected_abcd['pattern_A_pivot_date']) + 1,
+                b: get_formatted_date(selected_abcd['pattern_B_pivot_date'])  + 1,
+                c: get_formatted_date(selected_abcd['pattern_C_pivot_date'])  + 1,
+                d: get_formatted_date(selected_abcd['trade_entered_date'])  + 1,
+                exit_date: get_formatted_date(selected_abcd['trade_exited_date']) + 1,
+                x_date: get_formatted_date(selected_abcd['x_pivot_date']) + 1,
+                x_price: parseFloat(selected_abcd['x_pivot_price']),
                 a_price: parseFloat(selected_abcd['pivot_A_price']),
-                b_price:  parseFloat(selected_abcd['pivot_B_price']),
-                c_price:  parseFloat(selected_abcd['pivot_C_price']),
+                b_price: parseFloat(selected_abcd['pivot_B_price']),
+                c_price: parseFloat(selected_abcd['pivot_C_price']),
                 d_price: parseFloat(selected_abcd['trade_entered_price']),
+                stop_loss: parseFloat(selected_abcd['trade_stop_loss']),
+                take_profit: parseFloat(selected_abcd['trade_exited_price']),
+                entered_price: parseFloat(selected_abcd['trade_entered_price']),
+                ab_price_length: parseFloat(selected_abcd['ab_price_length']),
+                exit_price: parseFloat(selected_abcd['trade_exited_price']),
+                result: selected_abcd['trade_result']
             }))
-            // abcd.a = get_index(selected_abcd['pattern_A_pivot_date'])
-            // abcd.b = get_index(selected_abcd['pattern_B_pivot_date'])
-            // abcd.c = get_index(selected_abcd['pattern_C_pivot_date'])
-            // abcd.d = get_index(selected_abcd['trade_entered_date'])
-
-            // abcd.a_price = parseFloat(selected_abcd['pivot_A_price'])
-            // abcd.b_price = parseFloat(selected_abcd['pivot_B_price'])
-            // abcd.c_price = parseFloat(selected_abcd['pivot_C_price'])
-            // abcd.d_price = parseFloat(selected_abcd['trade_entered_price'])
+           
 
 
         }
     },[selected_abcd])
-    
+
+    const handleMouseDown = () => {
+        mousePressedRef.current = true;
+        y_coord_on_mouse_click.current = mouseY.current
+        x_coord_on_mouse_click.current = mouseX.current
+
+      
+    };
+    const handleMouseDownPrices = () => {
+        mouse_pressed_on_prices.current = true;
+        y_coord_on_mouse_click.current = mouseY.current
+        x_coord_on_mouse_click.current = mouseX.current
+    };
+    const handleMouseUp = () => {
+        mousePressedRef.current = false;
+        candleChartRef.current.height.previousBaselineY = candleChartRef.current.height.currentBaselineY
+        candleChartRef.current.height.prev_Y_OffSet = candleChartRef.current.height.current_Y_OffSet
+        candleChartRef.current.width.prev_canvas_width = candleChartRef.current.width.current_canvas_width
+        candleChartRef.current.width.prev_X_OffSet = candleChartRef.current.width.current_X_OffSet
+        candleChartRef.current.price.prev_mid_price = candleChartRef.current.price.current_mid_price
+        candleChartRef.current.price.prev_pixels_per_price_unit = candleChartRef.current.price.current_pixels_per_price_unit
+
+
+        // ==========
+        candleChartRef.current.height.previousBaselineY = candleChartRef.current.height.currentBaselineY
+        
+
+        
+    };
+    const handleMouseUpPrices = () => {
+        mouse_pressed_on_prices.current = false;
+        prev_shrink_expand.current = current_shrink_expand.current
+        candleChartRef.current.height.previousBaselineY = candleChartRef.current.height.currentBaselineY
+        candleChartRef.current.price.prev_mid_price = candleChartRef.current.price.current_mid_price
+        candleChartRef.current.price.prev_pixels_per_price_unit = candleChartRef.current.price.current_pixels_per_price_unit
+        height_counter.current = 0
+        for (const candle of candleChartRef.current.candles.candles) {
+            candle.prev_high = candle.current_high;
+            candle.prev_bottom = candle.current_bottom;
+            candle.prev_low = candle.current_low;
+            candle.prev_height = candle.current_height;
+        }
+
+      
+    };
     return(
         <div className='candle_chart_container'>
          
@@ -1199,11 +1572,7 @@ export const Candle_Chart = (props) => {
 
                     <div className='header-bar'>
     
-                        <div className='header_slot' onClick={()=>{
-                            set_is_listing_status(!is_listing_status)
-                        }}>
-                                {ticker_symbol}
-                            </div>
+                        <div className='header_slot' onClick={()=>{set_is_listing_status(!is_listing_status)}}>{ticker_symbol}</div>
                             <div className='header_slot'>
                                 <div className='header_one'>H</div>
                                 <div className='header_two' style={{color: candle_color}}>{candle_high}</div>
